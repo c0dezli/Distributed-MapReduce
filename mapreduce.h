@@ -27,6 +27,8 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
 
 /* Forward-declaration, the definition to edit is farther down */
 struct map_reduce;
