@@ -87,8 +87,8 @@ struct map_reduce {
 	bool server, client;
 	int n_threads,             				// Number of worker threads to use
 		*size,												// bytes of kv pairs in each buffer
-	//	*infd, outfd,							  	// File discripter
-	//	*infd_failed, outfd_failed,
+		*infd, outfd,							  	// File discripter
+		*infd_failed, outfd_failed,
 		*mapfn_status,
 		reducefn_status;
 
