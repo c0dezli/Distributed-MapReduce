@@ -91,15 +91,16 @@ mr_create(map_fn map, reduce_fn reduce, int nmaps) {
 
    // File Descriptors
    mr->outfd           = -1;
-   mr->infd            = malloc (nmaps * sizeof(int));
-
+   mr->infd            = malloc(nmaps * sizeof(int));
+   mr->server_sockfd   = -1;
+   mr->client_sockfd   = malloc(nmaps * sizeof(int));
    // Threads
    mr->map_threads     = malloc(nmaps * sizeof(pthread_t));
    mr->mapfn_status    = malloc(nmaps * sizeof(int));
    mr->reducefn_status = -1;
 
    // Arguments of Funtion Wappers
-   mr->args            = malloc ((nmaps + 1) * sizeof(struct args_helper));
+   mr->args            = malloc((nmaps + 1) * sizeof(struct args_helper));
 
    // Lock & Conditional Variables
    mr->_lock           = malloc(nmaps * sizeof(pthread_mutex_t));
@@ -148,71 +149,34 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 {
   if(mr->server) {
   	struct args_helper *reduce_args;
-  	
+
   	// Open the socket and get the fd
-  	mr->outfd = socket(AF_INET, SOCK_STREAM, 0);
+    mr->outfd = open(outpath, O_WRONLY | O_CREAT | O_TRUNC, 644);
+  	// mr->outfd = socket(AF_INET, SOCK_STREAM, 0);
   	if (mr->outfd == -1) {
-	  close(mr->outfd);
-	  perror("Cannot open input file\n");
-	  return -1;
-	 }
-	
-	// Construct the reduce arguments
-	reduce_args         = &(mr->args[mr->n_threads]);
-	reduce_args->mr     = mr;
-	reduce_args->reduce = mr->reduce;
-	reduce_args->map    = mr->map;
-	reduce_args->outfd  = mr->outfd;
-	reduce_args->nmaps  = mr->n_threads;
-	/*
-     int sockfd, newsockfd, portno;
-     socklen_t  clilen;
-     char buffer[20];
-     struct sockaddr_in serv_addr, cli_addr;
-     struct hostent *server;
-	
-     bzero((char *) &serv_addr, sizeof(serv_addr));
-     server = gethostbyname ("localhost"); 	
-     serv_addr.sin_addr.s_addr = INADDR_ANY;
-     serv_addr.sin_family = AF_INET;
-     bcopy((char *)server->h_addr, (char *)&serv_addr.sinaddr.s_addr, server->h_length);
-     serv_addr.sin_port = htons(portno);
-     if (bind(sockfd, (struct sockaddr *) &serv_addr,
-              sizeof(serv_addr)) < 0) 
-              perror("ERROR on binding");
-     listen(sockfd,5);
-     clilen = sizeof(cli_addr);
-     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-     if (newsockfd < 0) 
-          perror("ERROR on accept");
+	     close(mr->outfd);
+	     perror("Server: Cannot open ouput file.\n");
+	     return -1;
+	  }
+    mr->server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (mr->socket == -1) {
+      close(mr->outfd);
+      close(mr->socket);
+      perror("Server: Cannot open socket.\n");
+    }
 
-     while (1) {
-        bzero (buffer,20);
-        n = recv (newsockfd,buffer, sizeof (buffer), 0);
-        if (n == 0) {
-		printf ("Server: client closed connection\n");
-		break;
-	}
-        if (n < 0) perror ("ERROR reading key from socket");
-	n = recv (newsockfd, &tmp, sizeof (tmp), 0); 
-	value = htonl (tmp);
-        if (n == 0) {
-		printf ("Server: client closed connection\n");
-		break;
-	}
-        if (n < 0) perror ("ERROR reading value from socket");
-        printf("Server received: key=%s, value=%d\n",buffer, value);
+  	// Construct the reduce arguments
+  	reduce_args         = &(mr->args[mr->n_threads]);
+  	reduce_args->mr     = mr;
+  	reduce_args->reduce = mr->reduce;
+  	reduce_args->map    = mr->map;
+  	reduce_args->outfd  = mr->outfd;
+  	reduce_args->nmaps  = mr->n_threads;
 
-     }
-     close (newsockfd);	      
-     */
-     
-     
-     
-        //set up a socket to listen for connections on the given IP address and port. 
-	//Once this is ready, it should launch a thread to carry out the reduce operation.  
+        //set up a socket to listen for connections on the given IP address and port.
+	//Once this is ready, it should launch a thread to carry out the reduce operation.
 	//This thread should wait and accept connections until it has one from each mapper
-	
+
 	// Create reduce thread
 	if (pthread_create(&mr->reduce_thread, NULL, &reduce_wrapper, (void *)reduce_args) != 0) {
 	perror("Failed to create reduce thread.\n");
@@ -222,10 +186,10 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
   	return 0;
   } else if(mr->client) {
 	struct args_helper *map_args;
-	
+
 	// Create n threads for map function (n = n_threads)
 	for(int i=0; i<(mr->n_threads); i++) {
-		
+
 	 //Assign different socketfd to every map thread
 	  mr->infd[i] = socket(AF_INET, SOCK_STREAM, 0);
 	  if (mr->infd[i] == -1) {
@@ -235,7 +199,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 	 }
 	// Give map status a init value
 	mr->mapfn_status[i] = -1;
-	
+
 	// Construct the map arguments
 	map_args         = &(mr->args[i]);
 	map_args->mr     = mr;
@@ -244,7 +208,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 	map_args->infd   = mr->infd[i];
 	map_args->id     = i;
 	map_args->nmaps  = mr->n_threads;
-	
+
 	// Create map threads
 	/*
 
@@ -252,13 +216,13 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
     struct sockaddr_in serv_addr;
     struct hostent *server;
-    char key[20]; 
+    char key[20];
     int value;
-    int i;  
+    int i;
 
- //   portno = 
+ //   portno =
 //    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-//    if (sockfd < 0) 
+//    if (sockfd < 0)
 //        perror("ERROR opening socket");
 
     server = gethostbyname(argv[1]);
@@ -268,25 +232,25 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     }
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr, 
+    bcopy((char *)server->h_addr,
          (char *)&serv_addr.sin_addr.s_addr,
          server->h_length);
     serv_addr.sin_port = htons(portno);
 
-    if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) 
+    if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)
         perror("ERROR connecting");
 
     for (i=0; i < 10; i++) {
-	sprintf (key, "key%d ", i); 
+	sprintf (key, "key%d ", i);
 	if (send (sockfd, key, 20, 0) < 0)
 		perror ("ERROR sending key");
-	value = htonl (i); 
+	value = htonl (i);
 	if (send (sockfd, &value, sizeof (value), 0) < 0)
 		perror ("ERROR sending value");
-    }	
+    }
 
     printf ("Client: closing connection\n");
-    close (sockfd); 
+    close (sockfd);
 
 
 
@@ -306,7 +270,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
   } else return -1;
 
 
-   
+
 	}
 
   // Create thread for reduce function
@@ -318,7 +282,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     return -1;
   }
 */
- 
+
   // Success
 	return 0;
 }

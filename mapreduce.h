@@ -91,7 +91,7 @@ struct map_reduce {
 	int n_threads,             				// Number of worker threads to use
 		*size,												// bytes of kv pairs in each buffer
 		*infd, outfd,							  	// File discripter
-		*infd_failed, outfd_failed,
+		*client_sockfd, server_sockfd,
 		*mapfn_status,
 		reducefn_status;
 
@@ -219,4 +219,4 @@ int mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv);
  */
 int mr_consume(struct map_reduce *mr, int id, struct kvpair *kv);
 
-#endif       	   	   	
+#endif
