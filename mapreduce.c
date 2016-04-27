@@ -149,35 +149,57 @@ mr_destroy(struct map_reduce *mr) {
 int
 mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 {
-  struct args_helper *map_args,
-                     *reduce_args;
-
-  // Create n threads for map function (n = n_threads)
+  if(mr->server) {
+  	struct args_helper *reduce_args;
+	// Construct the reduce arguments
+	reduce_args         = &(mr->args[mr->n_threads]);
+	reduce_args->mr     = mr;
+	reduce_args->reduce = mr->reduce;
+	reduce_args->map    = mr->map;
+	reduce_args->outfd  = -1;//mr->outfd;
+	reduce_args->nmaps  = mr->n_threads;
+	
+	// Create reduce thread
+	if (pthread_create(&mr->reduce_thread, NULL, &reduce_wrapper, (void *)reduce_args) != 0) {
+	perror("Failed to create reduce thread.\n");
+	return -1;
+  	}
+  	// Success
+  	return 0;
+  } else if(mr->client) {
+	struct args_helper *map_args;
+	// Create n threads for map function (n = n_threads)
 	for(int i=0; i<(mr->n_threads); i++) {
-    // Assign different fd to every map thread
-//    mr->infd[i] = open(inpath, O_RDONLY, 644);
-  //  if (mr->infd[i] == -1) {
-    //  close(mr->infd[i]);
-  //    perror("Cannot open input file\n");
-   //   return -1;
-   // }
-    // Give map status a init value
-    mr->mapfn_status[i] = -1;
+	// Assign different fd to every map thread
+	// mr->infd[i] = open(inpath, O_RDONLY, 644);
+	//  if (mr->infd[i] == -1) {
+	//  close(mr->infd[i]);
+	//    perror("Cannot open input file\n");
+	//   return -1;
+	// }
+	// Give map status a init value
+	mr->mapfn_status[i] = -1;
+	
+	// Construct the map arguments
+	map_args         = &(mr->args[i]);
+	map_args->mr     = mr;
+	map_args->map    = mr->map;
+	map_args->reduce = mr->reduce;
+	map_args->infd   = -1;//mr->infd[i];
+	map_args->id     = i;
+	map_args->nmaps  = mr->n_threads;
+	
+	// Create map threads
+	if(pthread_create(&mr->map_threads[i], NULL, &map_wrapper, (void *)map_args) != 0) {
+	perror("Failed to create map thread.\n");
+	return -1;
+    	}
+    	// Success
+    	return 0;
+  } else return -1;
 
-    // Construct the map arguments
-    map_args         = &(mr->args[i]);
-    map_args->mr     = mr;
-    map_args->map    = mr->map;
-    map_args->reduce = mr->reduce;
-    map_args->infd   = -1;//mr->infd[i];
-    map_args->id     = i;
-    map_args->nmaps  = mr->n_threads;
 
-    // Create map threads
-		if(pthread_create(&mr->map_threads[i], NULL, &map_wrapper, (void *)map_args) != 0) {
-      perror("Failed to create map thread.\n");
-      return -1;
-    }
+   
 	}
 
   // Create thread for reduce function
@@ -189,19 +211,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     return -1;
   }
 */
-  // Construct the map arguments
-  reduce_args         = &(mr->args[mr->n_threads]);
-  reduce_args->mr     = mr;
-  reduce_args->reduce = mr->reduce;
-  reduce_args->map    = mr->map;
-  reduce_args->outfd  = -1;//mr->outfd;
-  reduce_args->nmaps  = mr->n_threads;
-
-  // Create reduce thread
-  if (pthread_create(&mr->reduce_thread, NULL, &reduce_wrapper, (void *)reduce_args) != 0) {
-    perror("Failed to create reduce thread.\n");
-    return -1;
-  }
+ 
   // Success
 	return 0;
 }
