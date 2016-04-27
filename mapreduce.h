@@ -16,6 +16,16 @@
 
 /* Header includes */
 #include <stdint.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <fcntl.h>
 
 /* Forward-declaration, the definition to edit is farther down */
 struct map_reduce;
@@ -60,7 +70,25 @@ typedef int (*reduce_fn)(struct map_reduce *mr, int outfd, int nmaps);
  * functions.
  */
 struct map_reduce {
-	/* add your fields here */
+	pthread_mutex_t *_lock;						// Create the lock
+	pthread_t *map_threads,
+		   reduce_thread;
+	pthread_cond_t *not_full,
+		       *not_empty;
+
+	char **buffer;
+
+	map_fn map;												// Declear the function pointers
+	reduce_fn reduce;
+
+	int n_threads,             				// Number of worker threads to use
+		*size,												// bytes of kv pairs in each buffer
+		*infd, outfd,							  	// File discripter
+		*infd_failed, outfd_failed,
+		*mapfn_status,
+		reducefn_status;
+
+	struct args_helper *args;
 };
 
 /**
