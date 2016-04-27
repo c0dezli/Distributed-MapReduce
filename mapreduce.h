@@ -76,15 +76,19 @@ struct map_reduce {
 	pthread_cond_t *not_full,
 		       *not_empty;
 
-	char **buffer;
+	char **buffer,
+	      *path,
+	      *ip;
+
+	uint16_t port;
 
 	map_fn map;												// Declear the function pointers
 	reduce_fn reduce;
 
 	int n_threads,             				// Number of worker threads to use
 		*size,												// bytes of kv pairs in each buffer
-		*infd, outfd,							  	// File discripter
-		*infd_failed, outfd_failed,
+	//	*infd, outfd,							  	// File discripter
+	//	*infd_failed, outfd_failed,
 		*mapfn_status,
 		reducefn_status;
 

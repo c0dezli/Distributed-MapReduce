@@ -76,10 +76,10 @@ mr_create(map_fn map, reduce_fn reduce, int nmaps) {
    mr->n_threads       = nmaps;
 
    // File Descriptors
-   mr->outfd           = -1;
-   mr->outfd_failed    = -1;
-   mr->infd            = malloc (nmaps * sizeof(int));
-   mr->infd_failed     = malloc(nmaps * sizeof(int));
+//   mr->outfd           = -1;
+//   mr->outfd_failed    = -1;
+//   mr->infd            = malloc (nmaps * sizeof(int));
+//  mr->infd_failed     = malloc(nmaps * sizeof(int));
 
    // Threads
    mr->map_threads     = malloc(nmaps * sizeof(pthread_t));
@@ -119,8 +119,8 @@ mr_destroy(struct map_reduce *mr) {
     free(mr->buffer[i]);
   }
   free(mr->buffer);
-  free(mr->infd);
-  free(mr->infd_failed);
+//  free(mr->infd);
+//  free(mr->infd_failed);
   free(mr->map_threads);
   free(mr->mapfn_status);
   free(mr->not_full);
@@ -141,12 +141,12 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
   // Create n threads for map function (n = n_threads)
 	for(int i=0; i<(mr->n_threads); i++) {
     // Assign different fd to every map thread
-    mr->infd[i] = open(inpath, O_RDONLY, 644);
-    if (mr->infd[i] == -1) {
-      close(mr->infd[i]);
-      perror("Cannot open input file\n");
-      return -1;
-    }
+//    mr->infd[i] = open(inpath, O_RDONLY, 644);
+  //  if (mr->infd[i] == -1) {
+    //  close(mr->infd[i]);
+  //    perror("Cannot open input file\n");
+   //   return -1;
+   // }
     // Give map status a init value
     mr->mapfn_status[i] = -1;
 
@@ -155,7 +155,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     map_args->mr     = mr;
     map_args->map    = mr->map;
     map_args->reduce = mr->reduce;
-    map_args->infd   = mr->infd[i];
+    map_args->infd   = -1;//mr->infd[i];
     map_args->id     = i;
     map_args->nmaps  = mr->n_threads;
 
@@ -168,19 +168,19 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
   // Create thread for reduce function
   // Assign file descriptor
-  mr->outfd = open(outpath, O_WRONLY | O_CREAT | O_TRUNC, 644);
+ /* mr->outfd = open(outpath, O_WRONLY | O_CREAT | O_TRUNC, 644);
   if (mr->outfd == -1) {
     close(mr->outfd);
     perror("Cannot open output file\n");
     return -1;
   }
-
+*/
   // Construct the map arguments
   reduce_args         = &(mr->args[mr->n_threads]);
   reduce_args->mr     = mr;
   reduce_args->reduce = mr->reduce;
   reduce_args->map    = mr->map;
-  reduce_args->outfd  = mr->outfd;
+  reduce_args->outfd  = -1;//mr->outfd;
   reduce_args->nmaps  = mr->n_threads;
 
   // Create reduce thread
@@ -209,16 +209,16 @@ mr_finish(struct map_reduce *mr) {
   }
 
   // Close the File Descriptors
-  for(int i=0; i<(mr->n_threads); i++) {
+ /* for(int i=0; i<(mr->n_threads); i++) {
     mr->infd_failed[i] = close(mr->infd[i]);
   }
   mr->outfd_failed = close(mr->outfd);
-
+*/
   // Check
   for(int i=0; i<(mr->n_threads); i++) {
-    if (mr->outfd_failed    == -1 ||
+    if (//mr->outfd_failed    == -1 ||
         mr->reducefn_status !=  0 ||
-        mr->infd_failed[i]  == -1 ||
+        //mr->infd_failed[i]  == -1 ||
         mr->mapfn_status[i] !=  0  )
       return -1;
   }
