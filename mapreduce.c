@@ -175,7 +175,36 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
      server = gethostbyname ("localhost"); 	
      serv_addr.sin_addr.s_addr = INADDR_ANY;
      serv_addr.sin_family = AF_INET;
-     
+     bcopy((char *)server->h_addr, (char *)&serv_addr.sinaddr.s_addr, server->h_length);
+     serv_addr.sin_port = htons(portno);
+     if (bind(sockfd, (struct sockaddr *) &serv_addr,
+              sizeof(serv_addr)) < 0) 
+              perror("ERROR on binding");
+     listen(sockfd,5);
+     clilen = sizeof(cli_addr);
+     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+     if (newsockfd < 0) 
+          perror("ERROR on accept");
+
+     while (1) {
+        bzero (buffer,20);
+        n = recv (newsockfd,buffer, sizeof (buffer), 0);
+        if (n == 0) {
+		printf ("Server: client closed connection\n");
+		break;
+	}
+        if (n < 0) perror ("ERROR reading key from socket");
+	n = recv (newsockfd, &tmp, sizeof (tmp), 0); 
+	value = htonl (tmp);
+        if (n == 0) {
+		printf ("Server: client closed connection\n");
+		break;
+	}
+        if (n < 0) perror ("ERROR reading value from socket");
+        printf("Server received: key=%s, value=%d\n",buffer, value);
+
+     }
+     close (newsockfd);	      
      */
      
      
@@ -217,7 +246,58 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 	map_args->nmaps  = mr->n_threads;
 	
 	// Create map threads
-	if(pthread_create(&mr->map_threads[i], NULL, &map_wrapper, (void *)map_args) != 0) {
+	/*
+
+    int sockfd, portno, n;
+
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+    char key[20]; 
+    int value;
+    int i;  
+
+ //   portno = 
+//    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+//    if (sockfd < 0) 
+//        perror("ERROR opening socket");
+
+    server = gethostbyname(argv[1]);
+    if (server == NULL) {
+        fprintf(stderr,"ERROR, no such host\n");
+        exit(0);
+    }
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr, 
+         (char *)&serv_addr.sin_addr.s_addr,
+         server->h_length);
+    serv_addr.sin_port = htons(portno);
+
+    if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) 
+        perror("ERROR connecting");
+
+    for (i=0; i < 10; i++) {
+	sprintf (key, "key%d ", i); 
+	if (send (sockfd, key, 20, 0) < 0)
+		perror ("ERROR sending key");
+	value = htonl (i); 
+	if (send (sockfd, &value, sizeof (value), 0) < 0)
+		perror ("ERROR sending value");
+    }	
+
+    printf ("Client: closing connection\n");
+    close (sockfd); 
+
+
+
+
+
+
+*/
+
+
+
+        if(pthread_create(&mr->map_threads[i], NULL, &map_wrapper, (void *)map_args) != 0) {
 	perror("Failed to create map thread.\n");
 	return -1;
     	}
