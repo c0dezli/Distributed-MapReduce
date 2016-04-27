@@ -41,7 +41,7 @@ static void *map_wrapper(void* map_args) {
   struct args_helper *args = (struct args_helper *) map_args;
   // Call the map function and save the return value
   args->mr->mapfn_status[args->id] =
-      args->map(args->mr, args->infd, args->id, args->nmaps);
+      args->map(args->mr, args->infd,  args->id, args->nmaps);
   // Send a signal to mr_consume after the function returns
   pthread_cond_signal(&args->mr->not_empty[args->id]);
   return NULL;
@@ -70,6 +70,20 @@ mr_create(map_fn map, reduce_fn reduce, int nmaps) {
      free(mr);
      return NULL;
    }
+   // Check if it's server or client
+   if(map == NULL){
+//client
+
+    mr->client = true;
+    mr->server = false;
+   }
+   else if (reduce == NULL){
+//server
+    mr->client = false;
+    mr->server = true;
+
+   }
+  else return NULL;
    // Save the Parameters
    mr->map             = map;
    mr->reduce          = reduce;

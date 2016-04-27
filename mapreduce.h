@@ -84,7 +84,7 @@ struct map_reduce {
 
 	map_fn map;												// Declear the function pointers
 	reduce_fn reduce;
-
+	bool server, client;
 	int n_threads,             				// Number of worker threads to use
 		*size,												// bytes of kv pairs in each buffer
 	//	*infd, outfd,							  	// File discripter
