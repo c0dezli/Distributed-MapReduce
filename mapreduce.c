@@ -294,24 +294,52 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 /* Blocks until the entire MapReduce operation is complete */
 int
 mr_finish(struct map_reduce *mr) {
-
-  // Close Threads
-  for(int i=0; i<(mr->n_threads); i++) {
-    if(pthread_join(mr->map_threads[i], NULL)) {
-      perror("Client: Failed to wait a map thead end");
+  if(mr->server){
+    // Wait reduce fn finish
+    if(pthread_join(mr->reduce_thread, NULL)) {
+      perror("Server: Failed to wait a map thead end");
       return -1;
     }
+
+    // Close socket
+    if(close(mr->server_sockfd) != 0){
+      perror("Server: Failed to close socket connection");
+      return -1;
+    }
+
+    // Check status
+    if(mr->reducefn_status != 0)
+      return -1;
   }
-  if(pthread_join(mr->reduce_thread, NULL)) {
-    perror("CLient: Failed to wait a map thead end");
-    return -1;
+  else if (mr->client){
+    // Wait all map function finish
+    for(int i=0; i<(mr->n_threads); i++) {
+      if(pthread_join(mr->map_threads[i], NULL)) {
+        perror("Client: Failed to wait a map thead end");
+        return -1;
+      }
+    }
+
+    // Close socket
+    for(int i=0; i<(mr->n_threads); i++) {
+      if(close(mr->server_sockfd) != 0){
+        perror("Client: Failed to close socket connection");
+        return -1;
+      }
+    }
+
+    // Check status
+    for(int i=0; i<(mr->n_threads); i++) {
+      if (mr->mapfn_status[i] != 0)
+        return -1;
   }
+
 
   // Close the File Descriptors
  /* for(int i=0; i<(mr->n_threads); i++) {
-    mr->infd_failed[i] = close(mr->infd[i]);
+    close(mr->infd[i]);
   }
-  mr->outfd_failed = close(mr->outfd);
+  close(mr->outfd);
   */
   // Check
   for(int i=0; i<(mr->n_threads); i++) {
