@@ -79,12 +79,15 @@ mr_create(map_fn map, reduce_fn reduce, int nmaps) {
      mr->client = false;
      mr->server = true;
    }
-   else if (reduce == NULL){
+
+   if (reduce == NULL){
      //server
      mr->client = true;
      mr->server = false;
    }
-   else return NULL;
+
+   if(reduce == NULL && map == NULL)
+     return NULL;
 
    // Save the Parameters
    mr->map             = map;
@@ -230,7 +233,8 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     }
   	// Success
   	return 0;
-  } else if(mr->client)
+  }
+  if(mr->client)
   {
     printf("Client: Hey! I'm running!\n");
 
