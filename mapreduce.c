@@ -168,7 +168,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
     // Open the socket
     mr->server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (mr->socket < 0) {
+    if (mr->server_sockfd < 0) {
       close(mr->outfd);
       close(mr->server_sockfd);
       perror("Server: Cannot open socket.\n");
@@ -211,12 +211,12 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
       //add child sockets to set
       for (int i=0; i<mr->n_threads; i++){
-        if(mr->client_socket[i] > 0)
-          FD_SET(mr->client_socket[i], &readfds);
+        if(mr->client_sockfd[i] > 0)
+          FD_SET(mr->client_sockfd[i], &readfds);
 
         //highest file descriptor number, need it for the select function
-        if(mr->client_socket[i] > max_sd)
-            max_sd = mr->client_socket[i];
+        if(mr->client_sockfd[i] > max_sd)
+            max_sd = mr->client_sockfd[i];
       }
 
       //wait for an activity on one of the sockets , timeout is NULL , so wait indefinitely
@@ -350,7 +350,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
     int portno = port;
     struct sockaddr_in serv_addr;
-    // struct hostent *server;
+     struct hostent *server1;
 
     if(inet_aton(ip, &serv_addr.sin_addr) == 0){
         perror("Client: Cannot connect?");
@@ -359,9 +359,9 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr,
+    bcopy((char *)server1->h_addr,
           (char *)&serv_addr.sin_addr.s_addr,
-          server->h_length);
+          server1->h_length);
     serv_addr.sin_port = htons(portno);
 
     //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf

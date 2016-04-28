@@ -29,6 +29,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <sys/time.h>
+#include <errno.h>
 
 /* Forward-declaration, the definition to edit is farther down */
 struct map_reduce;
