@@ -65,9 +65,8 @@ static void *reduce_wrapper(void* reduce_args) {
       return NULL;
     }
     socket_counter++;
-    if(socket_counter == args->mr->n_threads){
+    if(socket_counter+1 == args->mr->n_threads){
       printf("Server: All clients connected!\n");
-      break;
     }
   }
 
