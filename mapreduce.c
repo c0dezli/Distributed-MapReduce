@@ -483,10 +483,27 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
     // Wait for signal
     pthread_cond_wait(&mr->not_empty[id], &mr->_lock[id]);
   }
+/*
+ Receives the next key-value pair from the mapper with the given ID
+and writes it in the locations indicated by kv.
+ If no pair is available, this function should block
+until one is produced or the speci ed mapper thread returns.
+  Returns 1 if successful, 0 if the mapper returns without producing
+ another pair, and -1 on error 
+*/
+/*
+Note:  The  caller  is  responsible  for  allocating  memory  for  the  key  and  value,  and  will  specify the size of the 
+available space in the corresponding size  fields.  The
+mr_consume function should update the size fields 
+to indicate the actual number of bytes placed in each
+*/
 
   // Copy the value
   int offset = 0;
-  memmove(&kv->keysz, &mr->buffer[id][offset], 4);
+//TODO recieve values
+
+
+/*  memmove(&kv->keysz, &mr->buffer[id][offset], 4);
 	offset += 4;
 	memmove(kv->key, &mr->buffer[id][offset], kv->keysz);
 	offset += kv->keysz;
@@ -494,10 +511,11 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
 	offset += 4;
 	memmove(kv->value, &mr->buffer[id][offset], kv->valuesz);
 	offset += kv->valuesz;
-
+*/
   // Decrease size
   mr->size[id] -= offset;
-  memmove(&mr->buffer[id][0], &mr->buffer[id][offset], (MR_BUFFER_SIZE - offset));
+//TODO send the client the amount of space left????
+//  memmove(&mr->buffer[id][0], &mr->buffer[id][offset], (MR_BUFFER_SIZE - offset));
 
   // Send Signal
   pthread_cond_signal (&mr->not_full[id]);
