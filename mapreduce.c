@@ -162,6 +162,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 {
   if(mr->server)
   {
+    int socket_counter = 0;
     printf("Server: Hey! I'm running!\n");
   	// Open the output file
     mr->outfd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 644);
@@ -199,19 +200,23 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       return -1;
     }
 
-    printf("Server: Waiting for connections.\n");
+    printf("Server: Listening for connections.\n");
 
     //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
     // Connect all the clients
-    for (int i=0; i<mr->n_threads; i++) {
-      mr->client_sockfd[i] = accept(mr->server_sockfd, (struct sockaddr *)&mr->client_addr[i], &mr->client_addr_length);
+
+    while((mr->client_sockfd[i] = accept(mr->server_sockfd, (struct sockaddr *)&mr->client_addr[i], &mr->client_addr_length) >= 0){
+      socket_counter++;
       if (mr->client_sockfd[i] < 0) {
         printf("Server: Cannot connect client %d.\n", i);
         return -1;
       }
+      if(socket_counter == mr->n_threads){
+        printf("Server: All clients connected!\n");
+        break;
+      }
     }
 
-    printf("Server: All clients connected!\n");
 
     // Construct the reduce arguments
     struct args_helper *reduce_args;
