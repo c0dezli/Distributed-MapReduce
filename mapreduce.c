@@ -22,6 +22,8 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include "mapreduce.h"
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 /* Size of shared memory buffers */
 #define MR_BUFFER_SIZE 1024
@@ -235,7 +237,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 	 }
          mr->client_sockfd[i] = socket(AF_INET, SOCK_STREAM, 0);
          if (mr->client_sockfd[i] == -1){
-            close(mr->infd[i];
+            close(mr->infd[i]);
             close(mr->client_sockfd[i]);
             perror("Client: Cannot open socket.\n");
         }
@@ -255,11 +257,11 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
     int portno = port;
     struct sockaddr_in serv_addr;
-    struct hostent *server;
+//    struct hostent *server;
 
-    if(inet_aton(ip, &serv_addr) == 0){
+    if(inet_aton(ip, &serv_addr.sin_addr) == 0){
         return -1;
-
+        }
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     bcopy((char *)server->h_addr,
@@ -267,43 +269,27 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
          server->h_length);
     serv_addr.sin_port = htons(portno);
 
-
-   } //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
+    //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
 
     if (connect(mr->client_sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)
         perror("ERROR connecting");
 
-    int mapper_id = htonl (i);
-    if (send (mr->client_sockfd[i], &mapper_id, sizeof (mapper_id), 0) < 0)
-		perror ("ERROR sending value");
+//    int mapper_id = htonl (i);
+//    if (send (mr->client_sockfd[i], &mapper_id, sizeof (mapper_id), 0) < 0)
+//		perror ("ERROR sending value");
     
-
     printf ("Client: closing connection\n");
-    close (mr->client_sockfd);
+    close (mr->client_sockfd[i]);
 
     if(pthread_create(&mr->map_threads[i], NULL, &map_wrapper, (void *)map_args) != 0) {
-
-
 	perror("Failed to create map thread.\n");
 	return -1;
     	}
     	// Success
     	return 0;
-  } else return -1;
-}
-
-  // Create thread for reduce function
-  // Assign file descriptor
- /* mr->outfd = open(outpath, O_WRONLY | O_CREAT | O_TRUNC, 644);
-  if (mr->outfd == -1) {
-    close(mr->outfd);
-    perror("Cannot open output file\n");
-    return -1;
   }
-*/
+    } else return -1;
 
-  // Success
-	return 0;
 }
 
 /* Blocks until the entire MapReduce operation is complete */
