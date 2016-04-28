@@ -180,12 +180,22 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       perror("Server: Cannot bind socket.\n");
       return -1;
     }
+
     // Start Listen
     if (listen(mr->server_sockfd, port) == -1 ) {
       printf("Server: Cannot start socket listen.\n");
       return -1;
     }
 
+    // Connect all the clients
+    while(1) {
+      inet_len = sizeof(caddr);
+      if ( (client = accept( server, (struct sockaddr *)&caddr, &inet_len )) == -1 ) {
+          printf( "Error on client accept [%s]\n", strerror(errno) );
+          close(server);
+          return -1;
+      }
+    }
 
     // Construct the reduce arguments
     struct args_helper *reduce_args;
@@ -209,6 +219,8 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
   	// Success
   	return 0;
   } else if(mr->client) {
+  // =======================================================================
+  // Client Part
 	struct args_helper *map_args;
 
 	// Create n threads for map function (n = n_threads)
@@ -240,34 +252,38 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 	map_args->nmaps  = mr->n_threads;
 
 	// Create map threads
-	
+
     int portno = port;
     struct sockaddr_in serv_addr;
-    struct hostent *server;  
-    
+    struct hostent *server;
+
     if(inet_aton(ip, &serv_addr) == 0){
         return -1;
- 
+
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     bcopy((char *)server->h_addr,
          (char *)&serv_addr.sin_addr.s_addr,
          server->h_length);
     serv_addr.sin_port = htons(portno);
-    
+
+
    } //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
 
     if (connect(mr->client_sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)
         perror("ERROR connecting");
- 
+
     int mapper_id = htonl (i);
     if (send (mr->client_sockfd[i], &mapper_id, sizeof (mapper_id), 0) < 0)
 		perror ("ERROR sending value");
     
+
     printf ("Client: closing connection\n");
     close (mr->client_sockfd);
 
     if(pthread_create(&mr->map_threads[i], NULL, &map_wrapper, (void *)map_args) != 0) {
+
+
 	perror("Failed to create map thread.\n");
 	return -1;
     	}
@@ -357,6 +373,7 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
 int
 mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   pthread_mutex_lock(&mr->_lock[id]); // lock
+
 
   // Check the size to make sure there is a value
   while(mr->size[id] <= 0) {
