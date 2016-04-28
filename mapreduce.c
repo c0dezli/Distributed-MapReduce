@@ -271,7 +271,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
     //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
 
-    if (connect(mr->client_sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)
+    if (connect(mr->client_sockfd[i],(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)
         perror("ERROR connecting");
 
 //    int mapper_id = htonl (i);
@@ -289,7 +289,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     	return 0;
   }
     } else return -1;
-
+  return 0;
 }
 
 /* Blocks until the entire MapReduce operation is complete */
@@ -337,8 +337,26 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
     pthread_cond_wait(&mr->not_full[id], &mr->_lock[id]); // wait
   }
 
-  // Copy the value
-  memmove(&mr->buffer[id][mr->size[id]], &kv->keysz, 4);
+//sends the key-value pair kv to the reducer using the socket for the
+//mapper with the given ID.
+ if(send(id, &kv->keysz, 4, 0 ) < 0){
+    perror ("ERROR sending key size");
+    return -1;
+    }
+ if(send(id, kv->key, kv->keysz, 0 ) < 0){
+    perror ("ERROR sending key");
+    return -1;
+    }
+ if(send(id, &kv->valuesz, 4, 0 ) < 0){
+    perror ("ERROR sending value size");
+    return -1;
+    }
+ if(send(id, kv->value, kv->valuesz, 0) < 0){
+    perror ("ERROR sending value");
+    return -1;
+    }
+
+ /* memmove(&mr->buffer[id][mr->size[id]], &kv->keysz, 4);
 	mr->size[id] += 4;
 	memmove(&mr->buffer[id][mr->size[id]], kv->key, kv->keysz);
 	mr->size[id] += kv->keysz;
@@ -346,7 +364,7 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
 	mr->size[id] += 4;
 	memmove(&mr->buffer[id][mr->size[id]], kv->value, kv->valuesz);
 	mr->size[id] += kv->valuesz;
-
+ */
   //Send the signal
   pthread_cond_signal (&mr->not_empty[id]);
   // Unlock
