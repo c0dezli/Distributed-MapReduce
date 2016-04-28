@@ -79,31 +79,35 @@ struct map_reduce {
 		              reduce_thread;
 	pthread_cond_t  *not_full,
 		              *not_empty;
-	// Socket
-	struct sockaddr_in server_addr,
-										 *client_addr;
-
-	struct hostent *hostname;
-
-	char **buffer,
-	      *path,
-	      *ip;
-
-	uint16_t port;
-
-	map_fn map;												// Declear the function pointers
-	reduce_fn reduce;
-
-	bool server, client;
+	char            **buffer;
 
 	int n_threads,             				// Number of worker threads to use
 		*size,												// bytes of kv pairs in each buffer
 		*infd, outfd,							  	// File discripter
-		*client_sockfd, server_sockfd,
 		*mapfn_status,
 		reducefn_status;
 
 	struct args_helper *args;
+
+	// Socket
+	bool               server,
+										 client;
+
+	struct sockaddr_in server_addr,
+										 *client_addr;
+
+	int                server_sockfd,
+										 *client_sockfd;
+	uint16_t           port;
+
+	struct hostent     *hostname;
+
+	char               *path,
+	                   *ip;
+
+  // Function Pointers
+	map_fn map;												// Declear the function pointers
+	reduce_fn reduce;
 };
 
 /**
