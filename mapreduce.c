@@ -232,26 +232,28 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
   	return 0;
   } else if(mr->client)
   {
-    // =======================================================================
-    // Client Part
+    printf("Client: Hey! I'm running!\n");
+
   	// Create n threads for map function (n = n_threads)
   	for(int i=0; i<(mr->n_threads); i++) {
 
     	//Assign different socketfd to every map thread
       mr->infd[i] = open(path, O_WRONLY | O_CREAT | O_TRUNC, 644);
     	if (mr->infd[i] == -1) {
-    	  	close(mr->infd[i]);
-    	  	perror("Client: Cannot open input file");
-    	  	return -1;
-    	 }
+    	  close(mr->infd[i]);
+    	  perror("Client: Cannot open input file");
+    	  return -1;
+    	}
+      printf("Client: Opened input file\n");
 
-       // Create socket
-       mr->client_sockfd[i] = socket(AF_INET, SOCK_STREAM, 0);
-       if (mr->client_sockfd[i] == -1){
-          close(mr->infd[i]);
-          close(mr->client_sockfd[i]);
-          perror("Client: Cannot open socket");
-       }
+      // Create socket
+      mr->client_sockfd[i] = socket(AF_INET, SOCK_STREAM, 0);
+      if (mr->client_sockfd[i] == -1){
+        close(mr->infd[i]);
+        close(mr->client_sockfd[i]);
+        perror("Client: Cannot open socket");
+      }
+      printf("Client: Opened input socket\n");
 
       // Setup the address info
       mr->server_addr.sin_family = AF_INET;
@@ -260,12 +262,13 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         perror("Client: Cannot set ip");
         return -1;
       }
+      printf("Client: set ip\n");
 
       // Connect to server
       //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
       if (connect(mr->client_sockfd[i], (struct sockaddr *)&mr->server_addr, sizeof(mr->server_addr)) < 0){
-          perror("Client: ERROR connecting to server");
-          return -1;
+        perror("Client: ERROR connecting to server");
+        return -1;
       }
 
       // Construct the map arguments
