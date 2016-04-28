@@ -58,11 +58,11 @@ static void *reduce_wrapper(void* reduce_args) {
   //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
   // Connect all the clients
   // Cite website:
-  args->mr->client_addr_length = sizeof(args->mr->client_addr[socket_counter]);
+  int socket_counter = 0;
   while((args->mr->client_sockfd[socket_counter] = accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[socket_counter], &args->mr->client_addr_length)) >= 0){
     if (args->mr->client_sockfd[socket_counter] < 0) {
       printf("Server: Cannot connect client %d.\n", socket_counter);
-      return -1;
+      return NULL;
     }
     socket_counter++;
     if(socket_counter == args->mr->n_threads){
