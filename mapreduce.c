@@ -104,6 +104,8 @@ mr_create(map_fn map, reduce_fn reduce, int nmaps) {
    // Threads
    mr->map_threads     = malloc(nmaps * sizeof(pthread_t));
    mr->mapfn_status    = malloc(nmaps * sizeof(int));
+   for(int i=0; i<nmaps; i++)
+      mr->mapfn_status[i] = -1;
    mr->reducefn_status = -1;
 
    // Arguments of Funtion Wappers
@@ -236,8 +238,6 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
   } else if(mr->client) {
     // =======================================================================
     // Client Part
-  	struct args_helper *map_args;
-
   	// Create n threads for map function (n = n_threads)
   	for(int i=0; i<(mr->n_threads); i++) {
 
@@ -257,38 +257,30 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
           perror("Client: Cannot open socket.\n");
        }
 
-    	// Give map status a init value
-    	mr->mapfn_status[i] = -1;
-
-    	// Construct the map arguments
-    	map_args         = &(mr->args[i]);
-    	map_args->mr     = mr;
-    	map_args->map    = mr->map;
-    	map_args->reduce = mr->reduce;
-    	map_args->infd   = mr->infd[i];
-    	map_args->id     = i;
-    	map_args->nmaps  = mr->n_threads;
-
-      struct sockaddr_in serv_addr;
-      struct hostent *server1;
-
-      if(inet_aton(ip, &serv_addr.sin_addr) == 0){
+      // Setup the address info
+      if(inet_aton(ip, &mr->server_addr.sin_addr) == 0){
           perror("Client: Cannot connect?");
           return -1;
       }
+      mr->server_addr.sin_family = AF_INET;
+      mr->server_addr.sin_port = htons(port);
 
-      bzero((char *) &serv_addr, sizeof(serv_addr));
-      serv_addr.sin_family = AF_INET;
-      bcopy((char *)server1->h_addr,
-            (char *)&serv_addr.sin_addr.s_addr,
-            server1->h_length);
-      serv_addr.sin_port = htons(port);
-
+      // Connect to server
       //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
-      if (connect(mr->client_sockfd[i], (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
-          perror("ERROR connecting");
+      if (connect(mr->client_sockfd[i], (struct sockaddr *)&mr->server_addr, sizeof(mr->server_addr)) < 0){
+          perror("Client: ERROR connecting to server");
           return -1;
       }
+      // Construct the map arguments
+      struct args_helper *map_args;
+      map_args         = &(mr->args[i]);
+      map_args->mr     = mr;
+      map_args->map    = mr->map;
+      map_args->reduce = mr->reduce;
+      map_args->infd   = mr->infd[i];
+      map_args->id     = i;
+      map_args->nmaps  = mr->n_threads;
+
       // Create map threads
       if(pthread_create(&mr->map_threads[i], NULL, &map_wrapper, (void *)map_args) != 0) {
   	     perror("Failed to create map thread.\n");
