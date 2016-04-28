@@ -36,9 +36,7 @@ int main(int argc, char *argv[])
      serv_addr.sin_addr.s_addr = INADDR_ANY;
      serv_addr.sin_family = AF_INET;
 
-    bcopy((char *)server->h_addr,
-      (char *)&serv_addr.sin_addr.s_addr,
-			server->h_length);
+     bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
 
      serv_addr.sin_port = htons(portno);
 

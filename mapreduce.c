@@ -204,7 +204,8 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
     //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
     // Connect all the clients
-
+    // Cite website:
+    mr->client_addr_length = sizeof(mr->client_addr[socket_counter]);
     while((mr->client_sockfd[socket_counter] = accept(mr->server_sockfd, (struct sockaddr *)&mr->client_addr[socket_counter], &mr->client_addr_length)) >= 0){
       if (mr->client_sockfd[socket_counter] < 0) {
         printf("Server: Cannot connect client %d.\n", socket_counter);
@@ -217,7 +218,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       }
     }
 
-
+    printf("");
     // Construct the reduce arguments
     struct args_helper *reduce_args;
   	reduce_args         = &(mr->args[mr->n_threads]);
@@ -272,7 +273,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         perror("Client: Cannot set ip");
         return -1;
       }
-      printf("Client: set ip\n");
+      printf("Client: Set ip\n");
 
       // Connect to server
       //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
