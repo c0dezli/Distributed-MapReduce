@@ -42,9 +42,8 @@ int main(int argc, char *argv[])
 
      serv_addr.sin_port = htons(portno);
 
-     if (bind(sockfd, (struct sockaddr *) &serv_addr,
-              sizeof(serv_addr)) < 0)
-              perror("ERROR on binding");
+     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+        perror("ERROR on binding");
 
      listen(sockfd,5);
      clilen = sizeof(cli_addr);
@@ -62,13 +61,13 @@ int main(int argc, char *argv[])
 		        break;
 	      }
 
-        if (n < 0) perror ("ERROR reading key from socket");
+        if (n < 0) perror("ERROR reading key from socket");
 
 	      n = recv (newsockfd, &tmp, sizeof (tmp), 0);
 	      value = htonl (tmp);
 
         if (n == 0) {
-		        printf ("Server: client closed connection\n");
+		        printf("Server: client closed connection\n");
 		        break;
 	      }
 

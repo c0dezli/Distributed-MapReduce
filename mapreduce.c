@@ -209,7 +209,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
     // Connect all the clients
     for (int i=0; i<mr->n_threads; i++) {
-      mr->client_sockfd[i] = accept(mr->server_sockfd, (struct sockaddr *) &mr->client_addr[i], &mr->client_addr_length);
+      mr->client_sockfd[i] = accept(mr->server_sockfd, (struct sockaddr *)&mr->client_addr[i], sizeof(mr->client_addr[i]));
       if (mr->client_sockfd[i] < 0) {
         printf("Server: Cannot connect client %d.\n", i);
         return -1;
@@ -231,7 +231,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
   	// Create reduce thread
 	  if (pthread_create(&mr->reduce_thread, NULL, &reduce_wrapper, (void *)reduce_args) != 0) {
-	    perror("Server: Failed to create reduce thread.\n");
+	    perror("Server: Failed to create reduce thread");
 	    return -1;
     }
   	// Success
@@ -246,7 +246,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       mr->infd[i] = open(path, O_WRONLY | O_CREAT | O_TRUNC, 644);
     	if (mr->infd[i] == -1) {
     	  	close(mr->infd[i]);
-    	  	perror("Client: Cannot open input file\n");
+    	  	perror("Client: Cannot open input file");
     	  	return -1;
     	 }
 
@@ -255,7 +255,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
        if (mr->client_sockfd[i] == -1){
           close(mr->infd[i]);
           close(mr->client_sockfd[i]);
-          perror("Client: Cannot open socket.\n");
+          perror("Client: Cannot open socket");
        }
 
       // Setup the address info
@@ -269,9 +269,10 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       // Connect to server
       //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
       if (connect(mr->client_sockfd[i], (struct sockaddr *)&mr->server_addr, sizeof(mr->server_addr)) < 0){
-          perror("Client: ERROR connecting to server.\n");
+          perror("Client: ERROR connecting to server");
           return -1;
       }
+
       // Construct the map arguments
       struct args_helper *map_args;
       map_args         = &(mr->args[i]);
@@ -284,8 +285,8 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
       // Create map threads
       if(pthread_create(&mr->map_threads[i], NULL, &map_wrapper, (void *)map_args) != 0) {
-  	     perror("Failed to create map thread.\n");
-  	      return -1;
+  	     perror("Client: Failed to create map thread");
+  	     return -1;
       }
     }
     // Success
@@ -302,12 +303,12 @@ mr_finish(struct map_reduce *mr) {
   // Close Threads
   for(int i=0; i<(mr->n_threads); i++) {
     if(pthread_join(mr->map_threads[i], NULL)) {
-      perror("Failed to wait a map thead end.\n");
+      perror("Client: Failed to wait a map thead end");
       return -1;
     }
   }
   if(pthread_join(mr->reduce_thread, NULL)) {
-    perror("Failed to wait a map thead end.\n");
+    perror("Client: Failed to wait a map thead end");
     return -1;
   }
 
