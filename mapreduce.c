@@ -211,6 +211,8 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       }
     }
 
+    printf("Server: All clients connected!\n");
+
     // Construct the reduce arguments
     struct args_helper *reduce_args;
   	reduce_args         = &(mr->args[mr->n_threads]);
