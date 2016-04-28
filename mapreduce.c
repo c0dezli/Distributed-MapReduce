@@ -316,9 +316,13 @@ mr_finish(struct map_reduce *mr) {
       return -1;
     }
 
-    // Close socket
+    // Close socket and file
     if(close(mr->server_sockfd) != 0){
       perror("Server: Failed to close socket connection");
+      return -1;
+    }
+    if(close(mr->outfd) != 0){
+      perror("Server: Failed to close file");
       return -1;
     }
 
@@ -335,10 +339,14 @@ mr_finish(struct map_reduce *mr) {
       }
     }
 
-    // Close socket
+    // Close socket and file
     for(int i=0; i<(mr->n_threads); i++) {
-      if(close(mr->server_sockfd) != 0){
+      if(close(mr->client_sockfd[i]) != 0){
         perror("Client: Failed to close socket connection");
+        return -1;
+      }
+      if(close(mr->infd[i]) != 0){
+        perror("Client: Failed to close infd");
         return -1;
       }
     }
@@ -452,5 +460,5 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   // // Unlock
   // pthread_mutex_unlock(&mr->_lock[id]);
   // // Success
-  return 1;
+  return 0;
 }
