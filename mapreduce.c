@@ -340,109 +340,98 @@ mr_finish(struct map_reduce *mr) {
 /* Called by the Map function each time it produces a key-value pair */
 int
 mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
-  // Lock
-  pthread_mutex_lock(&mr->_lock[id]);
-  // Get the kv_pair size
-  int kv_size = kv->keysz + kv->valuesz + 8;
-
-  // First check if the buffer is overflow
-  while((mr->size[id]+kv_size) >= MR_BUFFER_SIZE) {
-    pthread_cond_wait(&mr->not_full[id], &mr->_lock[id]); // wait
-  }
-  if(0){
-    printf ("Client: closing connection\n");
-    // close (mr->client_sockfd[i]);
-  }
- //sends the key-value pair kv to the reducer using the socket for the
- //mapper with the given ID.
- if(send(id, &kv->keysz, 4, 0 ) < 0){
-    perror ("ERROR sending key size");
-    return -1;
-    }
- if(send(id, kv->key, kv->keysz, 0 ) < 0){
-    perror ("ERROR sending key");
-    return -1;
-    }
- if(send(id, &kv->valuesz, 4, 0 ) < 0){
-    perror ("ERROR sending value size");
-    return -1;
-    }
- if(send(id, kv->value, kv->valuesz, 0) < 0){
-    perror ("ERROR sending value");
-    return -1;
-    }
-
-
-
-
- /* memmove(&mr->buffer[id][mr->size[id]], &kv->keysz, 4);
-	mr->size[id] += 4;
-	memmove(&mr->buffer[id][mr->size[id]], kv->key, kv->keysz);
-	mr->size[id] += kv->keysz;
-	memmove(&mr->buffer[id][mr->size[id]], &kv->valuesz, 4);
-	mr->size[id] += 4;
-	memmove(&mr->buffer[id][mr->size[id]], kv->value, kv->valuesz);
-	mr->size[id] += kv->valuesz;
- */
-  //Send the signal
-  pthread_cond_signal (&mr->not_empty[id]);
-  // Unlock
-  pthread_mutex_unlock(&mr->_lock[id]);
-  // Success
+ //  // Lock
+ //  pthread_mutex_lock(&mr->_lock[id]);
+ //  // Get the kv_pair size
+ //  int kv_size = kv->keysz + kv->valuesz + 8;
+ //
+ //  // First check if the buffer is overflow
+ //  while((mr->size[id]+kv_size) >= MR_BUFFER_SIZE) {
+ //    pthread_cond_wait(&mr->not_full[id], &mr->_lock[id]); // wait
+ //  }
+ //
+ //  if(0){
+ //    printf ("Client: closing connection\n");
+ //    // close (mr->client_sockfd[i]);
+ //  }
+ // //sends the key-value pair kv to the reducer using the socket for the
+ // //mapper with the given ID.
+ // if(send(id, &kv->keysz, 4, 0 ) < 0){
+ //    perror ("ERROR sending key size");
+ //    return -1;
+ //    }
+ // if(send(id, kv->key, kv->keysz, 0 ) < 0){
+ //    perror ("ERROR sending key");
+ //    return -1;
+ //    }
+ // if(send(id, &kv->valuesz, 4, 0 ) < 0){
+ //    perror ("ERROR sending value size");
+ //    return -1;
+ //    }
+ // if(send(id, kv->value, kv->valuesz, 0) < 0){
+ //    perror ("ERROR sending value");
+ //    return -1;
+ //    }
+ //
+ //  //Send the signal
+ //  pthread_cond_signal (&mr->not_empty[id]);
+ //  // Unlock
+ //  pthread_mutex_unlock(&mr->_lock[id]);
+ //  // Success
 	return 1;
 }
 
 /* Called by the Reduce function to consume a key-value pair */
 int
 mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
-  pthread_mutex_lock(&mr->_lock[id]); // lock
-
-
-  // Check the size to make sure there is a value
-  while(mr->size[id] <= 0) {
-    // if(mr->mapfn_status[id] == 0) // Map function done its work
-    //   return 0;
-    // Wait for signal
-    pthread_cond_wait(&mr->not_empty[id], &mr->_lock[id]);
-  }
-    /*
-     Receives the next key-value pair from the mapper with the given ID
-    and writes it in the locations indicated by kv.
-     If no pair is available, this function should block
-    until one is produced or the speci ed mapper thread returns.
-      Returns 1 if successful, 0 if the mapper returns without producing
-     another pair, and -1 on error
-    */
-    /*
-    Note:  The  caller  is  responsible  for  allocating  memory  for  the  key  and  value,  and  will  specify the size of the
-    available space in the corresponding size  fields.  The
-    mr_consume function should update the size fields
-    to indicate the actual number of bytes placed in each
-    */
-
-      // Copy the value
-      int offset = 0;
-    //TODO recieve values
-
-
-    /*  memmove(&kv->keysz, &mr->buffer[id][offset], 4);
-    	offset += 4;
-    	memmove(kv->key, &mr->buffer[id][offset], kv->keysz);
-    	offset += kv->keysz;
-    	memmove(&kv->valuesz, &mr->buffer[id][offset], 4);
-    	offset += 4;
-    	memmove(kv->value, &mr->buffer[id][offset], kv->valuesz);
-    	offset += kv->valuesz;
-    */
-      // Decrease size
-      mr->size[id] -= offset;
-    //TODO send the client the amount of space left????
-    //  memmove(&mr->buffer[id][0], &mr->buffer[id][offset], (MR_BUFFER_SIZE - offset));
-
-  // Send Signal
-  pthread_cond_signal (&mr->not_full[id]);
-  // Unlock
-  pthread_mutex_unlock(&mr->_lock[id]);
-  // Success
-	return 1;
+  // pthread_mutex_lock(&mr->_lock[id]); // lock
+  //
+  //
+  // // Check the size to make sure there is a value
+  // while(mr->size[id] <= 0) {
+  //   // if(mr->mapfn_status[id] == 0) // Map function done its work
+  //   //   return 0;
+  //   // Wait for signal
+  //   pthread_cond_wait(&mr->not_empty[id], &mr->_lock[id]);
+  // }
+  //   /*
+  //    Receives the next key-value pair from the mapper with the given ID
+  //   and writes it in the locations indicated by kv.
+  //    If no pair is available, this function should block
+  //   until one is produced or the speci ed mapper thread returns.
+  //     Returns 1 if successful, 0 if the mapper returns without producing
+  //    another pair, and -1 on error
+  //   */
+  //   /*
+  //   Note:  The  caller  is  responsible  for  allocating  memory  for  the  key  and  value,  and  will  specify the size of the
+  //   available space in the corresponding size  fields.  The
+  //   mr_consume function should update the size fields
+  //   to indicate the actual number of bytes placed in each
+  //   */
+  //
+  //     // Copy the value
+  //     int offset = 0;
+  //   //TODO recieve values
+  //
+  //
+  //   /*  memmove(&kv->keysz, &mr->buffer[id][offset], 4);
+  //   	offset += 4;
+  //   	memmove(kv->key, &mr->buffer[id][offset], kv->keysz);
+  //   	offset += kv->keysz;
+  //   	memmove(&kv->valuesz, &mr->buffer[id][offset], 4);
+  //   	offset += 4;
+  //   	memmove(kv->value, &mr->buffer[id][offset], kv->valuesz);
+  //   	offset += kv->valuesz;
+  //   */
+  //     // Decrease size
+  //     mr->size[id] -= offset;
+  //   //TODO send the client the amount of space left????
+  //   //  memmove(&mr->buffer[id][0], &mr->buffer[id][offset], (MR_BUFFER_SIZE - offset));
+  //
+  // // Send Signal
+  // pthread_cond_signal (&mr->not_full[id]);
+  // // Unlock
+  // pthread_mutex_unlock(&mr->_lock[id]);
+  // // Success
+  return 1;
 }
