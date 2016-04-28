@@ -206,6 +206,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     // Connect all the clients
     // Cite website:
     mr->client_addr_length = sizeof(mr->client_addr[socket_counter]);
+
     while((mr->client_sockfd[socket_counter] = accept(mr->server_sockfd, (struct sockaddr *)&mr->client_addr[socket_counter], &mr->client_addr_length)) >= 0){
       if (mr->client_sockfd[socket_counter] < 0) {
         printf("Server: Cannot connect client %d.\n", socket_counter);
@@ -218,7 +219,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       }
     }
 
-    printf("");
+    printf("Server:Begin contruct the reduce arguments\n");
     // Construct the reduce arguments
     struct args_helper *reduce_args;
   	reduce_args         = &(mr->args[mr->n_threads]);
@@ -282,6 +283,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         return -1;
       }
 
+      printf("Client: Begin contruct the map arguments\n");
       // Construct the map arguments
       struct args_helper *map_args;
       map_args         = &(mr->args[i]);
