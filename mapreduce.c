@@ -205,7 +205,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
     // Connect all the clients
 
-    while((mr->client_sockfd[socket_counter] = accept(mr->server_sockfd, (struct sockaddr *)&mr->client_addr[socket_counter], &mr->client_addr_length) >= 0){
+    while((mr->client_sockfd[socket_counter] = accept(mr->server_sockfd, (struct sockaddr *)&mr->client_addr[socket_counter], &mr->client_addr_length)) >= 0){
       if (mr->client_sockfd[socket_counter] < 0) {
         printf("Server: Cannot connect client %d.\n", i);
         return -1;
