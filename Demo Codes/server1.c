@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 
      while (1) {
         bzero (buffer,20);
-        
+
         n = recv (newsockfd,buffer, sizeof (buffer), 0);
 
         if (n == 0) {

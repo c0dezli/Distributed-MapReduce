@@ -197,95 +197,15 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       perror("Server: Cannot start socket listen.\n");
       return -1;
     }
-    printf("Waiting for connections.\n");
+    printf("Server: Waiting for connections.\n");
 
     //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
     // Connect all the clients
-    while(1) {
-      //clear the socket set
-      FD_ZERO(&readfds);
-
-      //add server socketfd to set
-      FD_SET(mr->server_sockfd, &readfds);
-      max_fd = mr->server_sockfd;
-
-      //add child sockets to set
-      for (int i=0; i<mr->n_threads; i++){
-        if(mr->client_sockfd[i] > 0)
-          FD_SET(mr->client_sockfd[i], &readfds);
-
-        //highest file descriptor number, need it for the select function
-        if(mr->client_sockfd[i] > max_sd)
-            max_sd = mr->client_sockfd[i];
-      }
-
-      //wait for an activity on one of the sockets , timeout is NULL , so wait indefinitely
-      activity = select( max_sd + 1 , &readfds , NULL , NULL , NULL);
-
-      if ((activity < 0) && (errno!=EINTR)) {
-          perror("select error");
-          return -1;
-      }
-
-      //If something happened on the master socket , then its an incoming connection
-      if (FD_ISSET(master_socket, &readfds))
-      {
-          if ((new_socket = accept(master_socket, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
-          {
-              perror("accept");
-              exit(EXIT_FAILURE);
-          }
-
-          //inform user of socket number - used in send and receive commands
-          printf("New connection , socket fd is %d , ip is : %s , port : %d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
-          //add new socket to array of sockets
-          for (i = 0; i < max_clients; i++)
-          {
-              //if position is empty
-              if( client_socket[i] == 0 )
-              {
-                  client_socket[i] = new_socket;
-                  printf("Adding to list of sockets as %d\n" , i);
-
-                  break;
-              }
-          }
-      }
-      //else its some IO operation on some other socket :)
-      for (i = 0; i < max_clients; i++)
-      {
-          sd = client_socket[i];
-
-          if (FD_ISSET( sd , &readfds))
-          {
-              //Check if it was for closing , and also read the incoming message
-              if ((valread = read( sd , buffer, 1024)) == 0)
-              {
-                  //Somebody disconnected , get his details and print
-                  getpeername(sd , (struct sockaddr*)&address , (socklen_t*)&addrlen);
-                  printf("Host disconnected , ip %s , port %d \n" , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
-
-                  //Close the socket and mark as 0 in list for reuse
-                  close( sd );
-                  client_socket[i] = 0;
-              }
-
-              //Echo back the message that came in
-              else
-              {
-                  //set the string terminating NULL byte on the end of the data read
-                  buffer[valread] = '\0';
-                  send(sd , buffer , strlen(buffer) , 0 );
-              }
-          }
-      }
-
-
-      inet_len = sizeof(caddr);
-      if ((client = accept(server, (struct sockaddr *)&caddr, &inet_len)) == -1 ) {
-          printf( "Error on client accept [%s]\n", strerror(errno) );
-          close(server);
-          return -1;
+    for (int i=0; i<mr->n_threads; i++) {
+      mr->client_sockfd[i] = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+      if (mr->client_sockfd[i] < 0) {
+        perror("Server: Cannot connect client %d.\n", i);
+        return -1;
       }
     }
 
@@ -307,7 +227,6 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 	    perror("Server: Failed to create reduce thread.\n");
 	    return -1;
     }
-
   	// Success
   	return 0;
   } else if(mr->client) {
@@ -365,7 +284,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     serv_addr.sin_port = htons(portno);
 
     //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
-    if (connect(mr->client_sockfd[i],(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0){
+    if (connect(mr->client_sockfd[i], (struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0){
         perror("ERROR connecting");
         return -1;
     }
@@ -385,7 +304,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     	return 0;
     }
   }
-  // No client and no server 
+  // No client and no server
   return -1;
 }
 
@@ -489,12 +408,12 @@ and writes it in the locations indicated by kv.
  If no pair is available, this function should block
 until one is produced or the speci ed mapper thread returns.
   Returns 1 if successful, 0 if the mapper returns without producing
- another pair, and -1 on error 
+ another pair, and -1 on error
 */
 /*
-Note:  The  caller  is  responsible  for  allocating  memory  for  the  key  and  value,  and  will  specify the size of the 
+Note:  The  caller  is  responsible  for  allocating  memory  for  the  key  and  value,  and  will  specify the size of the
 available space in the corresponding size  fields.  The
-mr_consume function should update the size fields 
+mr_consume function should update the size fields
 to indicate the actual number of bytes placed in each
 */
 
