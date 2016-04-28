@@ -72,16 +72,17 @@ mr_create(map_fn map, reduce_fn reduce, int nmaps) {
      free(mr);
      return NULL;
    }
+
    // Check if it's server or client
    if(map == NULL){
      //client
-     mr->client = true;
-     mr->server = false;
+     mr->client = false;
+     mr->server = true;
    }
    else if (reduce == NULL){
      //server
-     mr->client = false;
-     mr->server = true;
+     mr->client = true;
+     mr->server = false;
    }
    else return NULL;
 
