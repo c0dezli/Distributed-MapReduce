@@ -84,6 +84,7 @@ mr_create(map_fn map, reduce_fn reduce, int nmaps) {
      mr->server = true;
    }
    else return NULL;
+
    // Save the Parameters
    mr->map             = map;
    mr->reduce          = reduce;
@@ -92,10 +93,13 @@ mr_create(map_fn map, reduce_fn reduce, int nmaps) {
    // File Descriptors
    mr->outfd           = -1;
    mr->infd            = malloc(nmaps * sizeof(int));
+
+   // Sockets
    mr->server_sockfd   = -1;
    mr->client_sockfd   = malloc(nmaps * sizeof(int));
    for(int i=0; i<nmaps; i++)
       mr->client_sockfd[i] = 0;
+   mr->client_addr_length = sizeof(struct sockaddr_in);
 
    // Threads
    mr->map_threads     = malloc(nmaps * sizeof(pthread_t));
@@ -202,9 +206,9 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
     // Connect all the clients
     for (int i=0; i<mr->n_threads; i++) {
-      mr->client_sockfd[i] = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+      mr->client_sockfd[i] = accept(mr->server_sockfd, (struct sockaddr *) &mr->client_addr[i], &mr->client_addr_length);
       if (mr->client_sockfd[i] < 0) {
-        perror("Server: Cannot connect client %d.\n", i);
+        printf("Server: Cannot connect client %d.\n", i);
         return -1;
       }
     }
@@ -238,7 +242,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
   	for(int i=0; i<(mr->n_threads); i++) {
 
   	//Assign different socketfd to every map thread
-    mr->infd[i] = open(outpath, O_WRONLY | O_CREAT | O_TRUNC, 644);
+    mr->infd[i] = open(path, O_WRONLY | O_CREAT | O_TRUNC, 644);
   	if (mr->infd[i] == -1) {
   	  	close(mr->infd[i]);
   	  	perror("Client: Cannot open input file\n");
