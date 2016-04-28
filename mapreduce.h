@@ -99,8 +99,9 @@ struct map_reduce {
 										 *client_addr;
 
 	int                server_sockfd,
-										 *client_sockfd,
-										 client_addr_length;
+										 *client_sockfd;
+
+	socklen_t					 client_addr_length;
 	uint16_t           port;
 
 	struct hostent     *hostname;

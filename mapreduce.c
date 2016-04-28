@@ -269,7 +269,6 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     	map_args->id     = i;
     	map_args->nmaps  = mr->n_threads;
 
-      int portno = port;
       struct sockaddr_in serv_addr;
       struct hostent *server1;
 
@@ -283,10 +282,10 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       bcopy((char *)server1->h_addr,
             (char *)&serv_addr.sin_addr.s_addr,
             server1->h_length);
-      serv_addr.sin_port = htons(portno);
+      serv_addr.sin_port = htons(port);
 
       //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
-      if (connect(mr->client_sockfd[i], (struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0){
+      if (connect(mr->client_sockfd[i], (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
           perror("ERROR connecting");
           return -1;
       }
@@ -349,7 +348,7 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   }
   if(0){
     printf ("Client: closing connection\n");
-    close (mr->client_sockfd[i]);
+    // close (mr->client_sockfd[i]);
   }
 //sends the key-value pair kv to the reducer using the socket for the
 //mapper with the given ID.
