@@ -148,24 +148,47 @@ int
 mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 {
   if(mr->server) {
-  	struct args_helper *reduce_args;
 
-  	// Open the socket and get the fd
-    mr->outfd = open(outpath, O_WRONLY | O_CREAT | O_TRUNC, 644);
+  	// Open the output file
+    mr->outfd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 644);
   	// mr->outfd = socket(AF_INET, SOCK_STREAM, 0);
-  	if (mr->outfd == -1) {
+  	if (mr->outfd < 0) {
 	     close(mr->outfd);
 	     perror("Server: Cannot open ouput file.\n");
 	     return -1;
 	  }
+
+    // Open the socket
     mr->server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (mr->socket == -1) {
+    if (mr->socket < 0) {
       close(mr->outfd);
-      close(mr->socket);
+      close(mr->server_sockfd);
       perror("Server: Cannot open socket.\n");
     }
+    // Setup the address info
+    mr->server_addr.sin_family = AF_INET;
+    mr->server_addr.sin_port = htons(port);
+    mr->server_addr.sin_addr.s_addr = INADDR_ANY;
 
-  	// Construct the reduce arguments
+    // if(inet_aton(ip, &mr->serv_addr.sin_addr) == 0) {
+    //   perror("Server: Cannot setup address");
+    //   return -1;
+    // }
+
+    // Bind the socket and address
+    if (bind(mr->server_sockfd, (struct sockaddr *) &mr->server_addr, sizeof(struct sockaddr)) == -1) {
+      perror("Server: Cannot bind socket.\n");
+      return -1;
+    }
+    // Start Listen
+    if (listen(mr->server_sockfd, port) == -1 ) {
+      printf("Server: Cannot start socket listen.\n");
+      return -1;
+    }
+
+
+    // Construct the reduce arguments
+    struct args_helper *reduce_args;
   	reduce_args         = &(mr->args[mr->n_threads]);
   	reduce_args->mr     = mr;
   	reduce_args->reduce = mr->reduce;
@@ -173,15 +196,16 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
   	reduce_args->outfd  = mr->outfd;
   	reduce_args->nmaps  = mr->n_threads;
 
-        //set up a socket to listen for connections on the given IP address and port.
-	//Once this is ready, it should launch a thread to carry out the reduce operation.
-	//This thread should wait and accept connections until it has one from each mapper
+    //set up a socket to listen for connections on the given IP address and port.
+    //Once this is ready, it should launch a thread to carry out the reduce operation.
+    //This thread should wait and accept connections until it has one from each mapper
 
-	// Create reduce thread
-	if (pthread_create(&mr->reduce_thread, NULL, &reduce_wrapper, (void *)reduce_args) != 0) {
-	perror("Failed to create reduce thread.\n");
-	return -1;
-  	}
+  	// Create reduce thread
+	  if (pthread_create(&mr->reduce_thread, NULL, &reduce_wrapper, (void *)reduce_args) != 0) {
+	    perror("Server: Failed to create reduce thread.\n");
+	    return -1;
+    }
+
   	// Success
   	return 0;
   } else if(mr->client) {
@@ -354,9 +378,8 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
 
   // Check the size to make sure there is a value
   while(mr->size[id] <= 0) {
-    if(mr->mapfn_status[id] == 0){  // Map function done its work
+    if(mr->mapfn_status[id] == 0) // Map function done its work
       return 0;
-    }
     // Wait for signal
     pthread_cond_wait(&mr->not_empty[id], &mr->_lock[id]);
   }

@@ -73,11 +73,17 @@ typedef int (*reduce_fn)(struct map_reduce *mr, int outfd, int nmaps);
  * functions.
  */
 struct map_reduce {
+	// Threads
 	pthread_mutex_t *_lock;						// Create the lock
-	pthread_t *map_threads,
-		   reduce_thread;
-	pthread_cond_t *not_full,
-		       *not_empty;
+	pthread_t       *map_threads,
+		              reduce_thread;
+	pthread_cond_t  *not_full,
+		              *not_empty;
+	// Socket
+	struct sockaddr_in server_addr,
+										 *client_addr;
+
+	struct hostent *hostname;
 
 	char **buffer,
 	      *path,
@@ -87,7 +93,9 @@ struct map_reduce {
 
 	map_fn map;												// Declear the function pointers
 	reduce_fn reduce;
+
 	bool server, client;
+
 	int n_threads,             				// Number of worker threads to use
 		*size,												// bytes of kv pairs in each buffer
 		*infd, outfd,							  	// File discripter
