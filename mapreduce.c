@@ -157,12 +157,9 @@ mr_destroy(struct map_reduce *mr) {
 int
 mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 {
-  if(mr->server) {
-    int opt = 1, // For socket setting
-        max_fd = -1,
-        activity;
-    fd_set readfds; // Set of socket descriptors
-
+  if(mr->server)
+  {
+    printf("Server: Hey! I'm running!\n");
   	// Open the output file
     mr->outfd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 644);
 
@@ -182,16 +179,12 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       return -1;
     }
 
-    // Set server_socket to allow mutiple connections
-    if(setsockopt(mr->server_sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0){
-        perror("Server: Cannot set socket.\n");
-        return -1;
-    }
-
     // Setup the address info
     mr->server_addr.sin_family = AF_INET;
     mr->server_addr.sin_port = htons(port);
-    mr->server_addr.sin_addr.s_addr = inet_addr(ip);
+    if(inet_aton(ip, &caddr.sin_addr) == 0)
+        return -1;
+    // mr->server_addr.sin_addr.s_addr = inet_addr(ip);
 
     // Bind the socket and address
     if (bind(mr->server_sockfd, (struct sockaddr *) &mr->server_addr, sizeof(struct sockaddr)) == -1) {
@@ -236,7 +229,8 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     }
   	// Success
   	return 0;
-  } else if(mr->client) {
+  } else if(mr->client)
+  {
     // =======================================================================
     // Client Part
   	// Create n threads for map function (n = n_threads)
@@ -261,8 +255,8 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       // Setup the address info
       mr->server_addr.sin_family = AF_INET;
       mr->server_addr.sin_port = htons(port);
-      mr->server_addr.sin_addr.s_addr = inet_addr(ip);
-
+      if(inet_aton(ip, &caddr.sin_addr) == 0)
+          return -1;
 
       // Connect to server
       //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
@@ -315,7 +309,7 @@ mr_finish(struct map_reduce *mr) {
     mr->infd_failed[i] = close(mr->infd[i]);
   }
   mr->outfd_failed = close(mr->outfd);
-*/
+  */
   // Check
   for(int i=0; i<(mr->n_threads); i++) {
     if (mr->reducefn_status !=  0 ||
@@ -342,8 +336,8 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
     printf ("Client: closing connection\n");
     // close (mr->client_sockfd[i]);
   }
-//sends the key-value pair kv to the reducer using the socket for the
-//mapper with the given ID.
+ //sends the key-value pair kv to the reducer using the socket for the
+ //mapper with the given ID.
  if(send(id, &kv->keysz, 4, 0 ) < 0){
     perror ("ERROR sending key size");
     return -1;
@@ -394,39 +388,39 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
     // Wait for signal
     pthread_cond_wait(&mr->not_empty[id], &mr->_lock[id]);
   }
-/*
- Receives the next key-value pair from the mapper with the given ID
-and writes it in the locations indicated by kv.
- If no pair is available, this function should block
-until one is produced or the speci ed mapper thread returns.
-  Returns 1 if successful, 0 if the mapper returns without producing
- another pair, and -1 on error
-*/
-/*
-Note:  The  caller  is  responsible  for  allocating  memory  for  the  key  and  value,  and  will  specify the size of the
-available space in the corresponding size  fields.  The
-mr_consume function should update the size fields
-to indicate the actual number of bytes placed in each
-*/
+    /*
+     Receives the next key-value pair from the mapper with the given ID
+    and writes it in the locations indicated by kv.
+     If no pair is available, this function should block
+    until one is produced or the speci ed mapper thread returns.
+      Returns 1 if successful, 0 if the mapper returns without producing
+     another pair, and -1 on error
+    */
+    /*
+    Note:  The  caller  is  responsible  for  allocating  memory  for  the  key  and  value,  and  will  specify the size of the
+    available space in the corresponding size  fields.  The
+    mr_consume function should update the size fields
+    to indicate the actual number of bytes placed in each
+    */
 
-  // Copy the value
-  int offset = 0;
-//TODO recieve values
+      // Copy the value
+      int offset = 0;
+    //TODO recieve values
 
 
-/*  memmove(&kv->keysz, &mr->buffer[id][offset], 4);
-	offset += 4;
-	memmove(kv->key, &mr->buffer[id][offset], kv->keysz);
-	offset += kv->keysz;
-	memmove(&kv->valuesz, &mr->buffer[id][offset], 4);
-	offset += 4;
-	memmove(kv->value, &mr->buffer[id][offset], kv->valuesz);
-	offset += kv->valuesz;
-*/
-  // Decrease size
-  mr->size[id] -= offset;
-//TODO send the client the amount of space left????
-//  memmove(&mr->buffer[id][0], &mr->buffer[id][offset], (MR_BUFFER_SIZE - offset));
+    /*  memmove(&kv->keysz, &mr->buffer[id][offset], 4);
+    	offset += 4;
+    	memmove(kv->key, &mr->buffer[id][offset], kv->keysz);
+    	offset += kv->keysz;
+    	memmove(&kv->valuesz, &mr->buffer[id][offset], 4);
+    	offset += 4;
+    	memmove(kv->value, &mr->buffer[id][offset], kv->valuesz);
+    	offset += kv->valuesz;
+    */
+      // Decrease size
+      mr->size[id] -= offset;
+    //TODO send the client the amount of space left????
+    //  memmove(&mr->buffer[id][0], &mr->buffer[id][offset], (MR_BUFFER_SIZE - offset));
 
   // Send Signal
   pthread_cond_signal (&mr->not_full[id]);
