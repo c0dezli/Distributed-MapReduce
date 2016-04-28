@@ -142,6 +142,7 @@ mr_destroy(struct map_reduce *mr) {
   }
   free(mr->buffer);
   free(mr->infd);
+  free(mr->client_sockfd);
   free(mr->map_threads);
   free(mr->mapfn_status);
   free(mr->not_full);
@@ -268,7 +269,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       // Connect to server
       //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
       if (connect(mr->client_sockfd[i], (struct sockaddr *)&mr->server_addr, sizeof(mr->server_addr)) < 0){
-          perror("Client: ERROR connecting to server");
+          perror("Client: ERROR connecting to server.\n");
           return -1;
       }
       // Construct the map arguments
