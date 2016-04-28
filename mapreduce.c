@@ -54,6 +54,23 @@ static void *map_wrapper(void* map_args) {
 static void *reduce_wrapper(void* reduce_args) {
   // Reconstruct the Arguments
   struct args_helper *args = (struct args_helper *) reduce_args;
+
+  //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
+  // Connect all the clients
+  // Cite website:
+  args->mr->client_addr_length = sizeof(args->mr->client_addr[socket_counter]);
+  while((args->mr->client_sockfd[socket_counter] = accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[socket_counter], &args->mr->client_addr_length)) >= 0){
+    if (args->mr->client_sockfd[socket_counter] < 0) {
+      printf("Server: Cannot connect client %d.\n", socket_counter);
+      return -1;
+    }
+    socket_counter++;
+    if(socket_counter == args->mr->n_threads){
+      printf("Server: All clients connected!\n");
+      break;
+    }
+  }
+
   // Call the reduce function and save the return value
   args->mr->reducefn_status =
     args->reduce(args->mr, args->outfd, args->nmaps);
@@ -199,27 +216,9 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       perror("Server: Cannot start socket listen.\n");
       return -1;
     }
+    printf("Server: Start listening for connections.\n");
 
-    printf("Server: Listening for connections.\n");
 
-    //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
-    // Connect all the clients
-    // Cite website:
-    mr->client_addr_length = sizeof(mr->client_addr[socket_counter]);
-
-    while((mr->client_sockfd[socket_counter] = accept(mr->server_sockfd, (struct sockaddr *)&mr->client_addr[socket_counter], &mr->client_addr_length)) >= 0){
-      if (mr->client_sockfd[socket_counter] < 0) {
-        printf("Server: Cannot connect client %d.\n", socket_counter);
-        return -1;
-      }
-      socket_counter++;
-      if(socket_counter == mr->n_threads){
-        printf("Server: All clients connected!\n");
-        break;
-      }
-    }
-
-    printf("Server:Begin contruct the reduce arguments\n");
     // Construct the reduce arguments
     struct args_helper *reduce_args;
   	reduce_args         = &(mr->args[mr->n_threads]);
@@ -229,15 +228,13 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
   	reduce_args->outfd  = mr->outfd;
   	reduce_args->nmaps  = mr->n_threads;
 
-    //set up a socket to listen for connections on the given IP address and port.
-    //Once this is ready, it should launch a thread to carry out the reduce operation.
-    //This thread should wait and accept connections until it has one from each mapper
-
   	// Create reduce thread
 	  if (pthread_create(&mr->reduce_thread, NULL, &reduce_wrapper, (void *)reduce_args) != 0) {
 	    perror("Server: Failed to create reduce thread");
 	    return -1;
     }
+    printf("Server: Start thread.\n");
+
   	// Success
   	return 0;
   }
@@ -265,7 +262,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         close(mr->client_sockfd[i]);
         perror("Client: Cannot open socket");
       }
-      printf("Client: Opened input socket\n");
+      printf("Client %d: Opened input socket\n", i);
 
       // Setup the address info
       mr->server_addr.sin_family = AF_INET;
@@ -274,7 +271,8 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         perror("Client: Cannot set ip");
         return -1;
       }
-      printf("Client: Set ip\n");
+
+      printf("Client %d: IP is set\n", i);
 
       // Connect to server
       //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
@@ -283,7 +281,8 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         return -1;
       }
 
-      printf("Client: Begin contruct the map arguments\n");
+      printf("Client %d: Connected with server.\n", i);
+
       // Construct the map arguments
       struct args_helper *map_args;
       map_args         = &(mr->args[i]);
@@ -350,7 +349,8 @@ mr_finish(struct map_reduce *mr) {
         return -1;
       }
   }
-  return 0; //success
+  // Pass all the check, then success
+  return 0;
 }
 
 /* Called by the Map function each time it produces a key-value pair */
@@ -400,6 +400,9 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
 /* Called by the Reduce function to consume a key-value pair */
 int
 mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
+
+
+
   // pthread_mutex_lock(&mr->_lock[id]); // lock
   //
   //
