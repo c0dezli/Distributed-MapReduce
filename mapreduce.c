@@ -400,8 +400,8 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
 
   // Check the size to make sure there is a value
   while(mr->size[id] <= 0) {
-    if(mr->mapfn_status[id] == 0) // Map function done its work
-      return 0;
+    // if(mr->mapfn_status[id] == 0) // Map function done its work
+    //   return 0;
     // Wait for signal
     pthread_cond_wait(&mr->not_empty[id], &mr->_lock[id]);
   }
