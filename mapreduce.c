@@ -332,22 +332,8 @@ mr_finish(struct map_reduce *mr) {
     for(int i=0; i<(mr->n_threads); i++) {
       if (mr->mapfn_status[i] != 0)
         return -1;
+      }
   }
-
-
-  // Close the File Descriptors
- /* for(int i=0; i<(mr->n_threads); i++) {
-    close(mr->infd[i]);
-  }
-  close(mr->outfd);
-  */
-  // Check
-  for(int i=0; i<(mr->n_threads); i++) {
-    if (mr->reducefn_status !=  0 ||
-        mr->mapfn_status[i] !=  0  )
-      return -1;
-  }
-
   return 0; //success
 }
 
