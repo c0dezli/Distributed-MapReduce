@@ -191,7 +191,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     // Setup the address info
     mr->server_addr.sin_family = AF_INET;
     mr->server_addr.sin_port = htons(port);
-    mr->server_addr.sin_addr.s_addr = INADDR_ANY;
+    mr->server_addr.sin_addr.s_addr = inet_addr(ip);
 
     // Bind the socket and address
     if (bind(mr->server_sockfd, (struct sockaddr *) &mr->server_addr, sizeof(struct sockaddr)) == -1) {
@@ -209,7 +209,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
     // Connect all the clients
     for (int i=0; i<mr->n_threads; i++) {
-      mr->client_sockfd[i] = accept(mr->server_sockfd, (struct sockaddr *)&mr->client_addr[i], sizeof(mr->client_addr[i]));
+      mr->client_sockfd[i] = accept(mr->server_sockfd, (struct sockaddr *)&mr->client_addr[i], &mr->client_addr_length);
       if (mr->client_sockfd[i] < 0) {
         printf("Server: Cannot connect client %d.\n", i);
         return -1;
@@ -259,12 +259,10 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
        }
 
       // Setup the address info
-      if(inet_aton(ip, &mr->server_addr.sin_addr) == 0){
-          perror("Client: Cannot connect?");
-          return -1;
-      }
       mr->server_addr.sin_family = AF_INET;
       mr->server_addr.sin_port = htons(port);
+      mr->server_addr.sin_addr.s_addr = inet_addr(ip);
+
 
       // Connect to server
       //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
@@ -308,7 +306,7 @@ mr_finish(struct map_reduce *mr) {
     }
   }
   if(pthread_join(mr->reduce_thread, NULL)) {
-    perror("Client: Failed to wait a map thead end");
+    perror("CLient: Failed to wait a map thead end");
     return -1;
   }
 
