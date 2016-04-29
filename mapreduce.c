@@ -43,6 +43,8 @@ static void *map_wrapper(void* map_args) {
   // Call the map function and save the return value
   args->mr->mapfn_status[args->id] =
       args->map(args->mr, args->infd, args->id, args->nmaps);
+
+  shutdown(args->mr->client_sockfd[args->id], SHUT_RDWR);
   // Send a signal to mr_consume after the function returns
   // pthread_cond_signal(&args->mr->not_empty[args->id]);
   return NULL;
@@ -181,11 +183,13 @@ mr_destroy(struct map_reduce *mr) {
 int
 mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 {
+  bzero((char *) &mr->server_addr, sizeof(mr->server_addr));
+  mr->server_addr.sin_family = AF_INET;
+  mr->server_addr.sin_port = htons(port);
+
   if(mr->client)
   {
     // Setup the address info
-    mr->server_addr.sin_family = AF_INET;
-    mr->server_addr.sin_port = htons(port);
     inet_aton(ip,&mr->server_addr.sin_addr);
 
   	// Create n threads for map function (n = nmaps)
@@ -193,7 +197,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
     	//Assign different socketfd to every map thread
       mr->infd[i] = open(path, O_RDONLY, 644);
-    	if (mr->infd[i] < 0) {
+    	if (mr->infd[i] == -1) {
     	  close(mr->infd[i]);
     	  perror("Client: Cannot open input file");
     	  return -1;
@@ -234,11 +238,9 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     // Success
     return 0;
   }
-  if(mr->server)
+  else if(mr->server)
   {
     // Setup the address info
-    mr->server_addr.sin_family = AF_INET;
-    mr->server_addr.sin_port = htons(port);
     mr->server_addr.sin_addr.s_addr	= INADDR_ANY;
 
     // Open the output file
