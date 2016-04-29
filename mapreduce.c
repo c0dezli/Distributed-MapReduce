@@ -57,7 +57,7 @@ static void *reduce_wrapper(void* reduce_args) {
   // Start Listen
   if (listen(args->mr->server_sockfd, args->nmaps) == -1 ) {
     perror("Server: Cannot start socket listen.\n");
-    return NULL;
+    return -1;
   }
   printf("Server: Start listening for connections.\n");
 
