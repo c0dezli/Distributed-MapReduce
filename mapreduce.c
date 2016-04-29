@@ -357,6 +357,7 @@ mr_finish(struct map_reduce *mr) {
 /* Called by the Map function each time it produces a key-value pair */
 int
 mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
+  //CLIENT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   // Lock
    pthread_mutex_lock(&mr->_lock[id]);
   // Get the kv_pair size
@@ -371,26 +372,29 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   //   } else {
   //     printf("Client %d, Send value %d to server\n", id,  ntohl(value));
   //   }
-
+  //CLIENT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  while(1){
    //Send the map function status
    value = htonl(mr->mapfn_status[id]);
    if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
      perror("Client: ERROR sending map function status.");
      return -1;
    }
+   //CLIENT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    value = htonl(kv_size);
    if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
      perror("Client: ERROR sending kv pair size");
      return -1;
    }
+   //CLIENT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    if(send(mr->client_sockfd[id], kv, kv_size, 0 ) < 0){
       perror("Client: ERROR sending kv pair");
       return -1;
     }
-
-
+    //CLIENT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  }
   //Send the signal
   //pthread_cond_signal (&mr->not_empty[id]);
   // Unlock
@@ -403,6 +407,8 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
 /* Called by the Reduce function to consume a key-value pair */
 int
 mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
+  //SERVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   // Lock
    pthread_mutex_lock(&mr->_lock[id]);
   //char * buffer[50];
@@ -411,6 +417,19 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
       kv_size = -1;
   uint32_t value;
   // Block until some value is in buffer
+  receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
+  if(receive_bytes != 4) {
+    if (receive_bytes == 0) {
+        perror("Server: client send nothing\n");
+    }
+    if (receive_bytes < 0) {
+        printf("Server: ERROR reading key from socket, client %d.\n", id);
+    }
+    perror("WTF");
+
+    return -1;
+  }
+  else if(htonl(fn_result) == 0) return 0;
   while(true){
     // // Test
     // receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(value), 0);
@@ -419,6 +438,7 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
     //   return -1;
     // }
     // else printf("Server: Get a value %d\n", ntohl(value));
+    //SERVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     //Get Funtion Return Value
     receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
@@ -434,10 +454,12 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
       return -1;
     }
     else if(htonl(fn_result) == 0) return 0;
+    //SERVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     // Get the kv pair size
       receive_bytes = recv(mr->client_sockfd[id], &kv_size, 4, 0);
-      if(receive_bytes != 4) {   if (receive_bytes == 0) {
+      if(receive_bytes != 4) {
+        if (receive_bytes == 0) {
              perror("Server: client send nothing\n");
          }
          if (receive_bytes < 0) {
@@ -446,6 +468,7 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
         perror("WTF");
         return -1;
       }
+      //SERVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     // Get the kv pair
       receive_bytes = recv(mr->client_sockfd[id], kv, kv_size, 0);
@@ -456,9 +479,10 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
              printf("Server: ERROR reading key from socket, client %d.\n", id);
          }
          perror("WTF");
-         
+
         return -1;
       }
+      //SERVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   }
   return 0;
