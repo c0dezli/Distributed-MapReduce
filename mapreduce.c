@@ -79,7 +79,7 @@ static void *reduce_wrapper(void* reduce_args) {
 
 void receive_bytes_check(int receive_bytes, int id){
    if (receive_bytes == 0) {
-       printf("Server: client %d send nothing\n", id);
+       perror("Server: client send nothing\n");
    }
    if (receive_bytes < 0) {
        printf("Server: ERROR reading key from socket, client %d.\n", id);
