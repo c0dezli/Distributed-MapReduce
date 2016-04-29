@@ -404,7 +404,7 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   }
   printf("Client: Send() for keysz returns %d.\n", x);
   
-printf("Client: kv-key is %s\n",(char*)kv->key);
+//printf("Client: kv-key is %s\n",(char*)kv->key);
   x = send(mr->client_sockfd[id], kv->key, kv->keysz, 0);
   if( x== -1) {
     perror("Client: Fail to send key");
@@ -459,12 +459,13 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   buffer = malloc(kv->keysz);
   receive_bytes = recv(mr->client_sockfd[id], buffer, sizeof(uint32_t), 0);
   printf("server: recv() for key returns %d.\n", receive_bytes);
-  printf("server: kv-key is %s\n",(char*)kv->key);
+ // printf("server: kv-key is %s\n",(char*)buffer);
 
   if(receive_bytes == 0) 
     printf("Server: Client %d send 0.\n",id);
     
   kv->key = buffer;
+//printf("server: kv-key is %s\n",(char*)kv->key);
   free(buffer);
   
   //kv->key = malloc(sizeof(kv->keysz));
@@ -478,12 +479,14 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   buffer = malloc(kv->valuesz);
   receive_bytes = recv(mr->client_sockfd[id], buffer, sizeof(uint32_t), 0);
   printf("server: recv() for value returns %d.\n", receive_bytes);
-  printf("Client: kv-value is %s\n",(char*)kv->value);
+ // printf("Client: kv-value is %s\n",(char*)buffer);
 
   if(receive_bytes == 0) 
     printf("Server: Client %d send 0.\n",id);
     
   kv->value = buffer;
+//printf("Client: kv-value is %s\n",(char*)kv->value);
+
   free(buffer);
   
   //kv->value = malloc(sizeof(kv->valuesz));
