@@ -237,7 +237,6 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     }
     printf("Server: Start listening for connections.\n");
 
-
     // Construct the reduce arguments
     struct args_helper *reduce_args;
   	reduce_args         = &(mr->args[mr->nmaps]);
@@ -285,8 +284,6 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         return -1;
       }
 
-
-
       // Construct the map arguments
       struct args_helper *map_args;
       map_args         = &(mr->args[i]);
@@ -328,6 +325,13 @@ mr_finish(struct map_reduce *mr) {
     if(close(mr->outfd) != 0){
       perror("Server: Failed to close file");
       return -1;
+    }
+    // Close client socket
+    for(int i=0; i<(mr->nmaps); i++) {
+      if(close(mr->client_sockfd[i]) != 0){
+        perror("Client: Failed to close socket connection");
+        return -1;
+      }
     }
 
     // Check status
@@ -373,33 +377,33 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   // Get the kv_pair size
    printf("Client: Trying to send value to server.\n");
    int kv_size = kv->keysz + kv->valuesz + 8;
-   int value;
+   uint32_t value;
 
-   value = htonl(1);
-   if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
-      perror("Client: ERROR sending map function status.");
-      return -1;
-    } else {
-      printf("Client %d, Send value %d to server\n", id,  ntohl(value));
-    }
-
-   // Send the map function status
-  //  value = htonl(mr->mapfn_status[id]);
+  //  value = htonl(1);
   //  if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
-  //    perror("Client: ERROR sending map function status.");
-  //    return -1;
-  //  }
-   //
-  //  value = htonl(kv_size);
-  //  if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
-  //    perror("Client: ERROR sending kv pair size");
-  //    return -1;
-  //  }
-   //
-  //  if(send(mr->client_sockfd[id], kv, kv_size, 0 ) < 0){
-  //     perror("Client: ERROR sending kv pair");
+  //     perror("Client: ERROR sending map function status.");
   //     return -1;
+  //   } else {
+  //     printf("Client %d, Send value %d to server\n", id,  ntohl(value));
   //   }
+
+   //Send the map function status
+   value = htonl(mr->mapfn_status[id]);
+   if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
+     perror("Client: ERROR sending map function status.");
+     return -1;
+   }
+
+   value = htonl(kv_size);
+   if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
+     perror("Client: ERROR sending kv pair size");
+     return -1;
+   }
+
+   if(send(mr->client_sockfd[id], kv, kv_size, 0 ) < 0){
+      perror("Client: ERROR sending kv pair");
+      return -1;
+    }
 
 
   //Send the signal
@@ -421,40 +425,39 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   uint32_t value;
   // Block until some value is in buffer
   while(true){
-    // Test
-    receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(value), 0);
-
-    if(receive_bytes != sizeof(value)) {
-      receive_bytes_check(receive_bytes, id);
-      return -1;
-    }
-    else printf("Server: Get a value %d\n", ntohl(value));
-
-    // Get Funtion Return Value
-    // receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
-    // if(receive_bytes != 4) {
+    // // Test
+    // receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(value), 0);
+    // if(receive_bytes != sizeof(value)) {
     //   receive_bytes_check(receive_bytes, id);
     //   return -1;
     // }
-    // else if(htonl(fn_result) == 0) return 0;
-    //
-    // // Get the kv pair size
-    // else if(i == 1){
-    //   receive_bytes = recv(mr->client_sockfd[id], &kv_size, 4, 0);
-    //   if(receive_bytes != 4) {
-    //     receive_bytes_check(receive_bytes, id);
-    //     return -1;
-    //   }
-    // }
-    //
-    // // Get the kv pair
-    // else {
-    //   receive_bytes = recv(mr->client_sockfd[id], kv, kv_size, 0);
-    //   if(receive_bytes != kv_size) {
-    //     receive_bytes_check(receive_bytes, id);
-    //     return -1;
-    //   }
-    // }
+    // else printf("Server: Get a value %d\n", ntohl(value));
+
+    //Get Funtion Return Value
+    receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
+    if(receive_bytes != 4) {
+      receive_bytes_check(receive_bytes, id);
+      return -1;
+    }
+    else if(htonl(fn_result) == 0) return 0;
+
+    // Get the kv pair size
+    else if(i == 1){
+      receive_bytes = recv(mr->client_sockfd[id], &kv_size, 4, 0);
+      if(receive_bytes != 4) {
+        receive_bytes_check(receive_bytes, id);
+        return -1;
+      }
+    }
+
+    // Get the kv pair
+    else {
+      receive_bytes = recv(mr->client_sockfd[id], kv, kv_size, 0);
+      if(receive_bytes != kv_size) {
+        receive_bytes_check(receive_bytes, id);
+        return -1;
+      }
+    }
   }
   return 0;
 }

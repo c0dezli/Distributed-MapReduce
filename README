@@ -17,7 +17,7 @@ http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
 
 http://stackoverflow.com/questions/24562573/c-non-blocking-send-not-working
 
-./mr-trace -s 5 127.0.1.255 2560
-./mr-trace -c 5 127.0.1.255 2560
+./mr-trace -s 2 127.0.1.255 2560
+./mr-trace -c 2 127.0.1.255 2560
 
-./mr-trace -s 5 127.0.1.255 2560
+./mr-trace -s 2 127.0.1.255 2560
