@@ -429,7 +429,7 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
     // Test
     receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(value), 0);
     while(receive_bytes != sizeof(value)) {
-receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(value), 0);
+      receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(value), 0);
     }
     printf("Server: Get a value %d\n", ntohl(value));
 
