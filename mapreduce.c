@@ -56,14 +56,18 @@ static void *reduce_wrapper(void* reduce_args) {
 
   //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
   // Connect all the clients
+  socklen_t addrlen = sizeof(struct sockaddr_in);
+
   for(int i=0; i<args->mr->nmaps; i++){
-    socklen_t addrlen = sizeof(args->mr->client_addr[i]);
     args->mr->client_sockfd[i] =
       accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[i], &addrlen);
 
     if (args->mr->client_sockfd[i] < 0) {
       printf("Server: Cannot build connection for client %d.\n", i);
       perror("Error message");
+      close(args->mr->outfd);
+      close(args->mr->client_sockfd[i]);
+      args->mr->reducefn_status = -1;
       return NULL;
     }
   }
@@ -83,7 +87,7 @@ struct map_reduce*
 mr_create(map_fn map, reduce_fn reduce, int nmaps) {
    struct map_reduce *mr = malloc (sizeof(struct map_reduce));
 
-   if(mr == 0) {  // Check Success
+   if(mr == NULL) {  // Check Success
      free(mr);
      return NULL;
    }
@@ -177,65 +181,13 @@ mr_destroy(struct map_reduce *mr) {
 int
 mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 {
-  if(mr->server)
+  if(mr->client)
   {
-  	// Open the output file
-    mr->outfd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 644);
-
-  	// mr->outfd = socket(AF_INET, SOCK_STREAM, 0);
-  	if (mr->outfd < 0) {
-	     close(mr->outfd);
-	     perror("Server: Cannot open ouput file.\n");
-	     return -1;
-	  }
-
-    // Open the socket
-    mr->server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (mr->server_sockfd < 0) {
-      close(mr->outfd);
-      close(mr->server_sockfd);
-      perror("Server: Cannot open socket.\n");
-      return -1;
-    }
-
     // Setup the address info
     mr->server_addr.sin_family = AF_INET;
     mr->server_addr.sin_port = htons(port);
-    mr->server_addr.sin_addr.s_addr	= inet_addr(ip);
+    inet_aton(ip,&mr->server_addr.sin_addr);
 
-    // Bind the socket and address
-    if (bind(mr->server_sockfd, (struct sockaddr *) &mr->server_addr, sizeof(struct sockaddr)) == -1) {
-      perror("Server: Cannot bind socket.\n");
-      return -1;
-    }
-
-    // Start Listen
-    if (listen(mr->server_sockfd, mr->nmaps) == -1 ) {
-      perror("Server: Cannot start socket listen.\n");
-      return -1;
-    }
-    printf("Server: Start listening for connections.\n");
-
-    // Construct the reduce arguments
-    struct args_helper *reduce_args;
-  	reduce_args         = &(mr->args[mr->nmaps]);
-  	reduce_args->mr     = mr;
-  	reduce_args->reduce = mr->reduce;
-  	reduce_args->map    = mr->map;
-  	reduce_args->outfd  = mr->outfd;
-  	reduce_args->nmaps  = mr->nmaps;
-
-  	// Create reduce thread
-	  if (pthread_create(&mr->reduce_thread, NULL, &reduce_wrapper, (void *)reduce_args) != 0) {
-	    perror("Server: Failed to create reduce thread");
-	    return -1;
-    }
-  	// Success
-  	return 0;
-  }
-
-  if(mr->client)
-  {
   	// Create n threads for map function (n = nmaps)
   	for(int i=0; i<(mr->nmaps); i++) {
 
@@ -249,20 +201,16 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
       // Create socket
       mr->client_sockfd[i] = socket(AF_INET, SOCK_STREAM, 0);
-      if (mr->client_sockfd[i] < 0){
+      if (mr->client_sockfd[i] == -1){
         close(mr->infd[i]);
         close(mr->client_sockfd[i]);
         perror("Client: Cannot open socket");
+        return -1;
       }
-
-      // Setup the address info
-      mr->server_addr.sin_family = AF_INET;
-      mr->server_addr.sin_port = htons(port);
-      mr->server_addr.sin_addr.s_addr	= inet_addr(ip);
 
       // Connect to server
       //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
-      if (connect(mr->client_sockfd[i], (struct sockaddr *)&mr->server_addr, sizeof(mr->server_addr)) < 0){
+      if(connect(mr->client_sockfd[i], (struct sockaddr *)&mr->server_addr, sizeof(mr->server_addr)) == -1){
         perror("Client: ERROR connecting to server");
         return -1;
       } else
@@ -273,13 +221,12 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       map_args         = &(mr->args[i]);
       map_args->mr     = mr;
       map_args->map    = mr->map;
-      map_args->reduce = mr->reduce;
       map_args->infd   = mr->infd[i];
       map_args->id     = i;
       map_args->nmaps  = mr->nmaps;
 
       // Create map threads
-      if(pthread_create(&mr->map_threads[i], NULL, &map_wrapper, (void *)map_args) != 0) {
+      if(pthread_create(&mr->map_threads[i], NULL, map_wrapper, (void *)map_args) != 0) {
   	     perror("Client: Failed to create map thread");
   	     return -1;
       }
@@ -287,6 +234,66 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     // Success
     return 0;
   }
+  if(mr->server)
+  {
+    // Setup the address info
+    mr->server_addr.sin_family = AF_INET;
+    mr->server_addr.sin_port = htons(port);
+    mr->server_addr.sin_addr.s_addr	= INADDR_ANY;
+
+    // Open the output file
+    mr->outfd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 644);
+
+    // mr->outfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (mr->outfd < 0) {
+       perror("Server: Cannot open ouput file.\n");
+       return -1;
+    }
+
+    // Open the socket
+    mr->server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (mr->server_sockfd < 0) {
+      perror("Server: Cannot open socket.\n");
+      return -1;
+    }
+
+    // Set server socket to allow multiple connections
+    if (setsockopt(mr->server_sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) ==-1) {
+      perror("Server: Cannot set sockopt.\n");
+      return -1;
+    }
+
+    // Bind the socket and address
+    if (bind(mr->server_sockfd, (struct sockaddr *) &mr->server_addr, sizeof(mr->server_addr)) == -1) {
+      perror("Server: Cannot bind socket.\n");
+      return -1;
+    }
+
+    // Start Listen
+    if (listen(mr->server_sockfd, mr->nmaps) == -1) {
+      perror("Server: Cannot start socket listen.\n");
+      return -1;
+    }
+    printf("Server: Start listening for connections.\n");
+
+    // Construct the reduce arguments
+    struct args_helper *reduce_args;
+    reduce_args         = &(mr->args[mr->nmaps]);
+    reduce_args->mr     = mr;
+    reduce_args->reduce = mr->reduce;
+    reduce_args->map    = mr->map;
+    reduce_args->outfd  = mr->outfd;
+    reduce_args->nmaps  = mr->nmaps;
+
+    // Create reduce thread
+    if (pthread_create(&mr->reduce_thread, NULL, reduce_wrapper, (void *)reduce_args) != 0) {
+      perror("Server: Failed to create reduce thread");
+      return -1;
+    }
+    // Success
+    return 0;
+  }
+
   // No client and no server
   return -1;
 }
@@ -294,35 +301,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 /* Blocks until the entire MapReduce operation is complete */
 int
 mr_finish(struct map_reduce *mr) {
-  if(mr->server){
-    // Wait reduce fn finish
-    if(pthread_join(mr->reduce_thread, NULL)) {
-      perror("Server: Failed to wait a map thead end");
-      return -1;
-    }
-
-    // Close server socket and file
-    if(close(mr->server_sockfd) != 0){
-      perror("Server: Failed to close socket connection");
-      return -1;
-    }
-    if(close(mr->outfd) != 0){
-      perror("Server: Failed to close file");
-      return -1;
-    }
-    // Close client socket
-    for(int i=0; i<(mr->nmaps); i++) {
-      if(close(mr->client_sockfd[i]) != 0){
-        perror("Client: Failed to close socket connection");
-        return -1;
-      }
-    }
-
-    // Check status
-    if(mr->reducefn_status != 0)
-      return -1;
-  }
-  else if (mr->client){
+  if(mr->client){
     printf("Client: I'm going to suiside now!\n");
     // Wait all map function finish
     for(int i=0; i<(mr->nmaps); i++) {
@@ -352,123 +331,91 @@ mr_finish(struct map_reduce *mr) {
         return -1;
       }
   }
-  // Pass all the check, then success
+  if(mr->server){
+    // Wait reduce fn finish
+    if(pthread_join(mr->reduce_thread, NULL)) {
+      perror("Server: Failed to wait a map thead end");
+      return -1;
+    }
+
+    // Close server socket and file
+    if(close(mr->server_sockfd) != 0){
+      perror("Server: Failed to close socket connection");
+      return -1;
+    }
+    if(close(mr->outfd) != 0){
+      perror("Server: Failed to close file");
+      return -1;
+    }
+
+    // Close client socket
+    for(int i=0; i<(mr->nmaps); i++) {
+      if(close(mr->client_sockfd[i]) != 0){
+        perror("Client: Failed to close socket connection");
+        return -1;
+      }
+    }
+
+    // Check status
+    if(mr->reducefn_status != 0)
+      return -1;
+  }
+
+  // Pass all the test, then success
   return 0;
 }
 
 /* Called by the Map function each time it produces a key-value pair */
 int
 mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
-  printf("Client: Current client id is %d.\n", id);
-  //CLIENT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  // Lock
-   pthread_mutex_lock(&mr->_lock[id]);
-  // Get the kv_pair size
-   int kv_size = kv->keysz + kv->valuesz + 8;
-   uint32_t value;
+  if(kv==NULL) return -1;
+  uint32_t value;
 
-  //  value = htonl(1);
-  //  if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
-  //     perror("Client: ERROR sending map function status.");
-  //     return -1;
-  //   } else {
-  //     printf("Client %d, Send value %d to server\n", id,  ntohl(value));
-  //   }
-  //CLIENT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  while(1){
-   //Send the map function status
-   value = htonl(mr->mapfn_status[id]);
-   if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
-     perror("Client: ERROR sending map function status.");
-     return -1;
-   }
-   //CLIENT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-   value = htonl(kv_size);
-   if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
-     perror("Client: ERROR sending kv pair size");
-     return -1;
-   }
-   //CLIENT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-   if(send(mr->client_sockfd[id], kv, kv_size, 0 ) < 0){
-      perror("Client: ERROR sending kv pair");
-      return -1;
-    }
-    //CLIENT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  value = htonl(kv->keysz);
+  if(send(mr->client_sockfd[id], &value, sizeof(uint32_t), 0) == -1) {
+    perror("Client: Fail to send keysz");
+    return -1;
   }
-  //Send the signal
-  //pthread_cond_signal (&mr->not_empty[id]);
-  // Unlock
-  pthread_mutex_unlock(&mr->_lock[id]);
+  if(send(mr->client_sockfd[id], kv->key, kv->keysz, 0) == -1) {
+    perror("Client: Fail to send key");
+    return -1;
+  }
+
+  value = htonl(kv->valuesz);
+  if(send(mr->client_sockfd[id], &value, sizeof(uint32_t), 0) == -1) {
+    perror("Client: Fail to send valuesz");
+    return -1;
+  }
+  if(send(mr->client_sockfd[id], kv->value, kv->valuesz, 0) == -1) {
+    perror("Client: Fail to send value");
+    return -1;
+  }
   //Success
-  close(mr->client_sockfd[id]);
+  //close(mr->client_sockfd[id]);
   return 0;
 }
 
 /* Called by the Reduce function to consume a key-value pair */
 int
 mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
-  //SERVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
   // Lock
-   pthread_mutex_lock(&mr->_lock[id]);
+  // pthread_mutex_lock(&mr->_lock[id]);
   //char * buffer[50];
   int fn_result = -1,
       receive_bytes = -1,
       kv_size = -1;
   uint32_t value;
-  // Block until some value is in buffer
 
-  while(true){
-    // // Test
-    // receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(value), 0);
-    // if(receive_bytes != sizeof(value)) {
-    //   receive_bytes_check(receive_bytes, id);
-    //   return -1;
-    // }
-    // else printf("Server: Get a value %d\n", ntohl(value));
-    //SERVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  //receive_bytes = recv(mr->client_sockfd[id], &fn_result, sizeof(fn_result), 0);
+  receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(uint32_t), 0);
+  kv->keysz = ntohl(value);
 
-    //Get Funtion Return Value
-    printf("mr->client_sockfd[id] is %d.\n", mr->client_sockfd[id]);
+  kv->key = malloc(sizeof(kv->keysz));
 
-    receive_bytes = recv(mr->client_sockfd[id], &fn_result, sizeof(fn_result), 0);
-    printf("WHat is fuck will you be! recive_bytes = %d", receive_bytes);
-    // while(receive_bytes != sizeof(fn_result)) {
-    //   receive_bytes = recv(mr->client_sockfd[id], &fn_result, sizeof(fn_result), 0);
-    // }
-    printf("receive_bytes = %d\n", receive_bytes);
-    //SERVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(uint32_t), 0);
+  kv->valuesz = ntohl(value);
 
-    // Get the kv pair size
-      receive_bytes = recv(mr->client_sockfd[id], &kv_size, 4, 0);
-      if(receive_bytes != 4) {
-        if (receive_bytes == 0) {
-             perror("Server: client send nothing\n");
-         }
-         if (receive_bytes < 0) {
-             printf("Server: ERROR reading key from socket, client %d.\n", id);
-         }
-        return -1;
-      }
-      //SERVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  kv->value = malloc(sizeof(kv->valuesz));
 
-    // Get the kv pair
-      receive_bytes = recv(mr->client_sockfd[id], kv, kv_size, 0);
-      if(receive_bytes != kv_size) {   if (receive_bytes == 0) {
-             perror("Server: client send nothing\n");
-         }
-         if (receive_bytes < 0) {
-             printf("Server: ERROR reading key from socket, client %d.\n", id);
-         }
-
-        return -1;
-      }
-      //SERVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  }
-
-  // Unlock
-  pthread_mutex_unlock(&mr->_lock[id]);
   return 0;
 }
