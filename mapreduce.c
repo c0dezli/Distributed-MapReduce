@@ -222,7 +222,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     // Setup the address info
     mr->server_addr.sin_family = AF_INET;
     mr->server_addr.sin_port = htons(port);
-    mr->server_addr.sin_addr.s_addr = INADDR_ANY;
+    inet_aton(ip, &mr->server_addr.sin_addr);
 
     // Bind the socket and address
     if (bind(mr->server_sockfd, (struct sockaddr *) &mr->server_addr, sizeof(struct sockaddr)) == -1) {
@@ -279,10 +279,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       // Setup the address info
       mr->server_addr.sin_family = AF_INET;
       mr->server_addr.sin_port = htons(port);
-      if(inet_aton(ip, &mr->server_addr.sin_addr) == 0) {
-        perror("Client: Cannot set ip");
-        return -1;
-      }
+      inet_aton(ip, &mr->server_addr.sin_addr);
 
       // Construct the map arguments
       struct args_helper *map_args;
@@ -447,7 +444,7 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
         receive_bytes_check(receive_bytes, id);
         return -1;
       }
-    
+
     // Get the kv pair
       receive_bytes = recv(mr->client_sockfd[id], kv, kv_size, 0);
       if(receive_bytes != kv_size) {
