@@ -375,9 +375,7 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   // Lock
   // pthread_mutex_lock(&mr->_lock[id]);
   // Get the kv_pair size
-
    printf("Client: Trying to send value to server.\n");
-
    int kv_size = kv->keysz + kv->valuesz + 8;
    int value;
 
@@ -429,10 +427,12 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   while(true){
     // Test
     receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(value), 0);
-    while(receive_bytes != sizeof(value)) {
-      receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(value), 0);
+
+    if(receive_bytes != sizeof(value)) {
+      receive_bytes_check(receive_bytes, id);
+      return -1;
     }
-    printf("Server: Get a value %d\n", ntohl(value));
+    else printf("Server: Get a value %d\n", ntohl(value));
 
     // Get Funtion Return Value
     // receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
