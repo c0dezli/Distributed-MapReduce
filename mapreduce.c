@@ -376,12 +376,13 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
    int value;
    // Send the map function status
    value = htonl(mr->mapfn_status[id]);
-   if(send(mr->client_sockfd[id], &value, 4, 0) < 0) {
+   if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
      perror("Client: ERROR sending map function status.");
      return -1;
    }
+   
    value = htonl(kv_size);
-   if(send(mr->client_sockfd[id], &value, 4, 0) < 0) {
+   if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
      perror("Client: ERROR sending kv pair size");
      return -1;
    }
