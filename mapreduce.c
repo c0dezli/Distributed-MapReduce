@@ -382,7 +382,7 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
    int value;
 
 
-   recv(mr->client_sockfd[id], &value, sizeof(value)
+   recv(mr->client_sockfd[id], &value, sizeof(value);
    printf("Client %d, get value %d from server\n", id,  ntohl(value));
 
 
@@ -434,7 +434,7 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
 
     value = htonl(1);
     send(mr->client_sockfd[id], &value, sizeof(value), 0);
-    printf("Server: Send value %d to client %d\n", ntohl(value), id);
+    printf("Server: Send value %d to client %d\n", ntohl(value), id );
 
     // Test
     receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(value), 0);
