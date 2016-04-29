@@ -198,7 +198,9 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     	//Assign different socketfd to every map thread
       mr->infd[i] = open(path, O_RDONLY, 644);
     	if (mr->infd[i] == -1) {
-    	  close(mr->infd[i]);
+        for(int j=0; j<i+1; j++){
+      	  close(mr->infd[j]);
+        }
     	  perror("Client: Cannot open input file");
     	  return -1;
     	}
@@ -206,8 +208,10 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       // Create socket
       mr->client_sockfd[i] = socket(AF_INET, SOCK_STREAM, 0);
       if (mr->client_sockfd[i] == -1){
-        close(mr->infd[i]);
-        close(mr->client_sockfd[i]);
+        for(int j=0; j<i+1; j++){
+      	  close(mr->infd[j]);
+          close(mr->client_sockfd[j]);
+        }
         perror("Client: Cannot open socket");
         return -1;
       }
@@ -215,6 +219,10 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       // Connect to server
       //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
       if(connect(mr->client_sockfd[i], (struct sockaddr *)&mr->server_addr, sizeof(mr->server_addr)) == -1){
+        for(int j=0; j<i+1; j++){
+          close(mr->infd[j]);
+          close(mr->client_sockfd[j]);
+        }
         perror("Client: ERROR connecting to server");
         return -1;
       } else
@@ -231,6 +239,10 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
       // Create map threads
       if(pthread_create(&mr->map_threads[i], NULL, map_wrapper, (void *)map_args) != 0) {
+        for(int j=0; j<i+1; j++){
+          close(mr->infd[j]);
+          close(mr->client_sockfd[j]);
+        }
   	     perror("Client: Failed to create map thread");
   	     return -1;
       }
@@ -238,7 +250,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     // Success
     return 0;
   }
-  else if(mr->server)
+  else  //Server
   {
     // Setup the address info
     mr->server_addr.sin_addr.s_addr	= INADDR_ANY;
@@ -255,24 +267,32 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     // Open the socket
     mr->server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (mr->server_sockfd < 0) {
+      close(mr->outfd);
+      close(mr->server_sockfd);
       perror("Server: Cannot open socket.\n");
       return -1;
     }
 
     // Set server socket to allow multiple connections
-    if (setsockopt(mr->server_sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) ==-1) {
+    if (setsockopt(mr->server_sockfd, SOL_SOCKET, (SO_REUSEADDR | SO_REUSEPORT), &(int){1}, sizeof(int)) ==-1) {
+      close(mr->outfd);
+      close(mr->server_sockfd);
       perror("Server: Cannot set sockopt.\n");
       return -1;
     }
 
     // Bind the socket and address
     if (bind(mr->server_sockfd, (struct sockaddr *) &mr->server_addr, sizeof(mr->server_addr)) == -1) {
+      close(mr->outfd);
+      close(mr->server_sockfd);
       perror("Server: Cannot bind socket.\n");
       return -1;
     }
 
     // Start Listen
     if (listen(mr->server_sockfd, mr->nmaps) == -1) {
+      close(mr->outfd);
+      close(mr->server_sockfd);
       perror("Server: Cannot start socket listen.\n");
       return -1;
     }
@@ -289,6 +309,8 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
     // Create reduce thread
     if (pthread_create(&mr->reduce_thread, NULL, reduce_wrapper, (void *)reduce_args) != 0) {
+      close(mr->outfd);
+      close(mr->server_sockfd);
       perror("Server: Failed to create reduce thread");
       return -1;
     }
@@ -412,12 +434,12 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(uint32_t), 0);
   kv->keysz = ntohl(value);
 
-  kv->key = malloc(sizeof(kv->keysz));
+  //kv->key = malloc(sizeof(kv->keysz));
 
   receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(uint32_t), 0);
   kv->valuesz = ntohl(value);
 
-  kv->value = malloc(sizeof(kv->valuesz));
+  //kv->value = malloc(sizeof(kv->valuesz));
 
   return 0;
 }
