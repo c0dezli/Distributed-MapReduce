@@ -275,7 +275,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
       if (connect(mr->client_sockfd[i], (struct sockaddr *)&mr->server_addr, sizeof(mr->server_addr)) < 0){
         perror("Client: ERROR connecting to server");
-        return NULL;
+        return -1;
       } else
         printf("Client %d: Connected with server, socketfd is %d.\n", i, mr->client_sockfd[i]);
 
