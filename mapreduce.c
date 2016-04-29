@@ -58,7 +58,7 @@ static void *reduce_wrapper(void* reduce_args) {
   // Connect all the clients
   for(int i=0; i<args->mr->n_threads; i++){
     args->mr->client_sockfd[i] =
-      accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[i], &args->mr->client_addr_length)
+      accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[i], &args->mr->client_addr_length);
     if (args->mr->client_sockfd[i] < 0) {
       printf("Server: Cannot connect client %d.\n", i);
       return NULL;
