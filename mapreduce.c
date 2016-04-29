@@ -374,23 +374,24 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   // Get the kv_pair size
    int kv_size = kv->keysz + kv->valuesz + 8;
    int value;
+
    // Send the map function status
    value = htonl(mr->mapfn_status[id]);
    if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
      perror("Client: ERROR sending map function status.");
      return -1;
    }
-   
-   value = htonl(kv_size);
-   if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
-     perror("Client: ERROR sending kv pair size");
-     return -1;
-   }
-
-   if(send(mr->client_sockfd[id], kv, kv_size, 0 ) < 0){
-      perror("Client: ERROR sending kv pair");
-      return -1;
-    }
+   //
+  //  value = htonl(kv_size);
+  //  if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
+  //    perror("Client: ERROR sending kv pair size");
+  //    return -1;
+  //  }
+   //
+  //  if(send(mr->client_sockfd[id], kv, kv_size, 0 ) < 0){
+  //     perror("Client: ERROR sending kv pair");
+  //     return -1;
+  //   }
 
 
   //Send the signal
@@ -410,32 +411,32 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
       kv_size = -1;
 
   // Block until some value is in buffer
-  for(int i=0; i<3; i++){
+  while(true){
     // Get Funtion Return Value
-    if(i == 0){
-      receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
-      if(receive_bytes != 4) {
-        receive_bytes_check(receive_bytes, id);
-        return -1;
-      }
-      else if(htonl(fn_result) == 0) return 0;
+    receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
+    if(receive_bytes != 4) {
+      receive_bytes_check(receive_bytes, id);
+      return -1;
     }
-    // Get the kv pair size
-    else if(i == 1){
-      receive_bytes = recv(mr->client_sockfd[id], &kv_size, 4, 0);
-      if(receive_bytes != 4) {
-        receive_bytes_check(receive_bytes, id);
-        return -1;
-      }
-    }
-    // Get the kv pair
-    else {
-      receive_bytes = recv(mr->client_sockfd[id], kv, kv_size, 0);
-      if(receive_bytes != kv_size) {
-        receive_bytes_check(receive_bytes, id);
-        return -1;
-      }
-    }
+    else if(htonl(fn_result) == 0) return 0;
+    // 
+    // // Get the kv pair size
+    // else if(i == 1){
+    //   receive_bytes = recv(mr->client_sockfd[id], &kv_size, 4, 0);
+    //   if(receive_bytes != 4) {
+    //     receive_bytes_check(receive_bytes, id);
+    //     return -1;
+    //   }
+    // }
+    //
+    // // Get the kv pair
+    // else {
+    //   receive_bytes = recv(mr->client_sockfd[id], kv, kv_size, 0);
+    //   if(receive_bytes != kv_size) {
+    //     receive_bytes_check(receive_bytes, id);
+    //     return -1;
+    //   }
+    // }
   }
   return 0;
 }
