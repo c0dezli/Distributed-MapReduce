@@ -449,14 +449,14 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   kv->keysz = ntohl(value);
   
   if(receive_bytes == 0) 
-    printf("Server: Client %d send 0",id);
+    printf("Server: Client %d send 0.\n",id);
   
   buffer = malloc(kv->keysz);
   receive_bytes = recv(mr->client_sockfd[id], buffer, sizeof(uint32_t), 0);
   printf("server: recv() for key returns %d.\n", receive_bytes);
   
   if(receive_bytes == 0) 
-    printf("Server: Client %d send 0",id);
+    printf("Server: Client %d send 0.\n",id);
     
   kv->key = buffer;
   free(buffer);
@@ -467,14 +467,14 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   printf("server: recv() for valuesz returns %d.\n", receive_bytes);
   kv->valuesz = ntohl(value);
   if(receive_bytes == 0) 
-    printf("Server: Client %d send 0",id);
+    printf("Server: Client %d send 0.\n",id);
     
   buffer = malloc(kv->valuesz);
   receive_bytes = recv(mr->client_sockfd[id], buffer, sizeof(uint32_t), 0);
   printf("server: recv() for value returns %d.\n", receive_bytes);
   
   if(receive_bytes == 0) 
-    printf("Server: Client %d send 0",id);
+    printf("Server: Client %d send 0.\n",id);
     
   kv->value = buffer;
   free(buffer);
