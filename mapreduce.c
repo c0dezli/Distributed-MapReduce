@@ -442,22 +442,19 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
     else if(htonl(fn_result) == 0) return 0;
 
     // Get the kv pair size
-    else if(i == 1){
       receive_bytes = recv(mr->client_sockfd[id], &kv_size, 4, 0);
       if(receive_bytes != 4) {
         receive_bytes_check(receive_bytes, id);
         return -1;
       }
-    }
-
+    
     // Get the kv pair
-    else {
       receive_bytes = recv(mr->client_sockfd[id], kv, kv_size, 0);
       if(receive_bytes != kv_size) {
         receive_bytes_check(receive_bytes, id);
         return -1;
       }
-    }
+
   }
   return 0;
 }
