@@ -375,12 +375,20 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
    int kv_size = kv->keysz + kv->valuesz + 8;
    int value;
 
+   value = htonl(1);
+    if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
+      perror("Client: ERROR sending map function status.");
+      return -1;
+    } else {
+      printf("Client %d, Send value %d to server\n", id,  ntohl(value));
+    }
+
    // Send the map function status
-   value = htonl(mr->mapfn_status[id]);
-   if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
-     perror("Client: ERROR sending map function status.");
-     return -1;
-   }
+  //  value = htonl(mr->mapfn_status[id]);
+  //  if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
+  //    perror("Client: ERROR sending map function status.");
+  //    return -1;
+  //  }
    //
   //  value = htonl(kv_size);
   //  if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
@@ -409,17 +417,26 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   int fn_result = -1,
       receive_bytes = -1,
       kv_size = -1;
-
+  uint32_t value;
   // Block until some value is in buffer
   while(true){
-    // Get Funtion Return Value
-    receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
-    if(receive_bytes != 4) {
+    // Test
+    receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(value), 0);
+    if(receive_bytes != sizeof(value)) {
       receive_bytes_check(receive_bytes, id);
       return -1;
     }
-    else if(htonl(fn_result) == 0) return 0;
-    // 
+    else if(ntohl(value) == 0) return 0;
+    else printf("Server: Get a value %d\n", ntohl(value));
+
+    // Get Funtion Return Value
+    // receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
+    // if(receive_bytes != 4) {
+    //   receive_bytes_check(receive_bytes, id);
+    //   return -1;
+    // }
+    // else if(htonl(fn_result) == 0) return 0;
+    //
     // // Get the kv pair size
     // else if(i == 1){
     //   receive_bytes = recv(mr->client_sockfd[id], &kv_size, 4, 0);
