@@ -373,13 +373,15 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   // pthread_mutex_lock(&mr->_lock[id]);
   // Get the kv_pair size
    int kv_size = kv->keysz + kv->valuesz + 8;
+   int value;
    // Send the map function status
-   if(send(mr->client_sockfd[id], &mr->mapfn_status[id], 4, 0) < 0) {
+   value = htonl(mr->mapfn_status[id]);
+   if(send(mr->client_sockfd[id], &value, 4, 0) < 0) {
      perror("Client: ERROR sending map function status.");
      return -1;
    }
-
-   if(send(mr->client_sockfd[id], &kv_size, 4, 0) < 0) {
+   value = htonl(kv_size);
+   if(send(mr->client_sockfd[id], &value, 4, 0) < 0) {
      perror("Client: ERROR sending kv pair size");
      return -1;
    }
