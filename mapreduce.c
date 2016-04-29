@@ -355,12 +355,12 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   // Get the kv_pair size
    int kv_size = kv->keysz + kv->valuesz + 8;
    // Send the map function status
-   if(send(mr->client_sockfd[id], &mr->mapfn_status[id]), 4, 0) < 0) {
+   if(send(mr->client_sockfd[id], &mr->mapfn_status[id], 4, 0) < 0) {
      perror("Client: ERROR sending map function status.");
      return -1;
    }
 
-   if(send(mr->client_sockfd[id], &kv_size, 4) < 0) {
+   if(send(mr->client_sockfd[id], &kv_size, 4, 0) < 0) {
      perror("Client: ERROR sending kv pair size");
      return -1;
    }
@@ -389,20 +389,21 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   while(mr->size[id] == 0){
     continue;
   }
-
+  int size;
   for(int i=0; i<3; i++){
     // bzero (buffer,50);
     // First Check Funtion Return Value
     if(i == 0){
       receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
       if(htonl(fn_result) == 0) return 0;
+      else size = receive_bytes;
     }
     else if(i == 1){
       receive_bytes = recv(mr->client_sockfd[id], kv, size, 0);
     }
     if(receive_bytes == size){
 
-        printf("Server: Recieved KV. Correct size\n")
+        printf("Server: Recieved KV. Correct size\n");
     }
     if (receive_bytes == 0) {
         printf ("Server: client closed connection\n");
@@ -412,7 +413,6 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
         perror("ERROR reading key from socket");
         return -1;
     }
-    printf("Server received: key=%s, value=%d\n",buffer, value);
 
   //}
 
@@ -450,5 +450,7 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   // // Unlock
   // pthread_mutex_unlock(&mr->_lock[id]);
   // Success
+
+}
   return 0;
 }
