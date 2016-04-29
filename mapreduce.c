@@ -44,7 +44,7 @@ static void *map_wrapper(void* map_args) {
   args->mr->mapfn_status[args->id] =
       args->map(args->mr, args->infd,  args->id, args->nmaps);
   // Send a signal to mr_consume after the function returns
-  pthread_cond_signal(&args->mr->not_empty[args->id]);
+  //pthread_cond_signal(&args->mr->not_empty[args->id]);
   return NULL;
 }
 
@@ -77,7 +77,7 @@ static void *reduce_wrapper(void* reduce_args) {
 
 void receive_bytes_check(int receive_bytes, int id){
  if (receive_bytes == 0) {
-     printf("Server: client %d closed connection\n", id);
+     printf("Server: client %d send nothing\n", id);
  }
  if (receive_bytes < 0) {
      printf("Server: ERROR reading key from socket, client %d.\n",id);
@@ -426,7 +426,6 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
       receive_bytes_check(receive_bytes, id);
       return -1;
     }
-    else if(ntohl(value) == 0) return 0;
     else printf("Server: Get a value %d\n", ntohl(value));
 
     // Get Funtion Return Value
