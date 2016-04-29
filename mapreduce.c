@@ -385,7 +385,7 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
    int value;
 
 
-   recv(mr->client_sockfd[id], &value, sizeof(value), 0);
+   recv(mr->client_sockfd[id], &value, sizeof(value);
    printf("Client %d, get value %d from server\n", id,  ntohl(value));
 
 
