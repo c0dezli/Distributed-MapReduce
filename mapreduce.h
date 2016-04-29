@@ -83,7 +83,7 @@ struct map_reduce {
 		              *not_empty;
 	char            **buffer;
 
-	int n_threads,             				// Number of worker threads to use
+	int nmaps,             				// Number of worker threads to use
 		*size,												// bytes of kv pairs in each buffer
 		*infd, outfd,							  	// File discripter
 		*mapfn_status,
@@ -101,7 +101,6 @@ struct map_reduce {
 	int                server_sockfd,
 										 *client_sockfd;
 
-	socklen_t					 client_addr_length;
 	uint16_t           port;
 
 	struct hostent     *hostname;

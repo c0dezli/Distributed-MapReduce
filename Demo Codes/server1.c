@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
      while (1) {
         bzero (buffer,20);
 
-        n = recv (newsockfd,buffer, sizeof (buffer), 0);
+        n = recv (newsockfd, buffer, sizeof(buffer), 0);
 
         if (n == 0) {
 		        printf ("Server: client closed connection\n");
@@ -61,17 +61,17 @@ int main(int argc, char *argv[])
 
         if (n < 0) perror("ERROR reading key from socket");
 
-	      n = recv (newsockfd, &tmp, sizeof (tmp), 0);
+	      n = recv (newsockfd, &tmp, sizeof(tmp), 0);
 	      value = htonl (tmp);
 
         if (n == 0) {
-		        printf("Server: client closed connection\n");
-		        break;
+		      printf("Server: client closed connection\n");
+		      break;
 	      }
 
         if (n < 0) perror ("ERROR reading value from socket");
 
-        printf("Server received: key=%s, value=%d\n",buffer, value);
+        printf("Server received: key=%s, value=%d\n", buffer, value);
      }
      close (newsockfd);
      return 0;
