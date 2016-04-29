@@ -73,7 +73,6 @@ static void *reduce_wrapper(void* reduce_args) {
       return NULL;
     }
   }
-  printf("Server: All clients connected!\n");
 
   // Call the reduce function and save the return value
   args->mr->reducefn_status =
@@ -225,8 +224,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         }
         perror("Client: ERROR connecting to server");
         return -1;
-      } else
-
+      } 
       // Construct the map arguments
       struct args_helper *map_args;
       map_args         = &(mr->args[i]);
@@ -433,36 +431,21 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   //receive_bytes = recv(mr->client_sockfd[id], &fn_result, sizeof(fn_result), 0);
   
   receive_bytes = recv(mr->client_sockfd[id], &size, sizeof(uint32_t), MSG_WAITALL);
-  if(receive_bytes == 0)  {
-    printf("Server: Client %d send 0.\n",id);
-    return 0;
-  }
+  if(receive_bytes == 0) return 0;
   kv->keysz = ntohl(size);
   
   // buffer = malloc(kv->keysz);
   receive_bytes = recv(mr->client_sockfd[id], kv->key, kv->keysz, MSG_WAITALL);
-  if(receive_bytes == 0) {
-    printf("Server: Client %d send 0.\n",id);
-    return 0;
-  }
+  if(receive_bytes == 0) return 0;
+
 
   receive_bytes = recv(mr->client_sockfd[id], &size, sizeof(uint32_t), MSG_WAITALL);
-  if(receive_bytes == 0)  {
-    printf("Server: Client %d send 0.\n",id);
-    return 0;
-  }
+  if(receive_bytes == 0) return 0;
   kv->valuesz = ntohl(size);
  
   receive_bytes = recv(mr->client_sockfd[id], kv->value, kv->valuesz, MSG_WAITALL);
-  if(receive_bytes == 0)  {
-    printf("Server: Client %d send 0.\n",id);
-    return 0;
-  }
+  if(receive_bytes == 0) return 0;
 
-  if(receive_bytes == 0)  {
-    printf("Server: Client %d send 0.\n",id);
-    return 0;
-  }
 
   return 1;
 }
