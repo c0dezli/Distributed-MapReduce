@@ -324,24 +324,24 @@ mr_finish(struct map_reduce *mr) {
   }
   else if (mr->client){
     // Wait all map function finish
-    for(int i=0; i<(mr->nmaps); i++) {
-      if(pthread_join(mr->map_threads[i], NULL)) {
-        perror("Client: Failed to wait a map thead end");
-        return -1;
-      }
-    }
-
-    // Close socket and file
-    for(int i=0; i<(mr->nmaps); i++) {
-      if(close(mr->client_sockfd[i]) != 0){
-        perror("Client: Failed to close socket connection");
-        return -1;
-      }
-      if(close(mr->infd[i]) != 0){
-        perror("Client: Failed to close infd");
-        return -1;
-      }
-    }
+    // for(int i=0; i<(mr->nmaps); i++) {
+    //   if(pthread_join(mr->map_threads[i], NULL)) {
+    //     perror("Client: Failed to wait a map thead end");
+    //     return -1;
+    //   }
+    // }
+    //
+    // // Close socket and file
+    // for(int i=0; i<(mr->nmaps); i++) {
+    //   if(close(mr->client_sockfd[i]) != 0){
+    //     perror("Client: Failed to close socket connection");
+    //     return -1;
+    //   }
+    //   if(close(mr->infd[i]) != 0){
+    //     perror("Client: Failed to close infd");
+    //     return -1;
+    //   }
+    // }
 
     // Check status
     for(int i=0; i<(mr->nmaps); i++) {
@@ -399,7 +399,7 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   // Unlock
   pthread_mutex_unlock(&mr->_lock[id]);
   //Success
-  close(mr->client_sockfd[id]);
+  //close(mr->client_sockfd[id]);
   return 0;
 }
 

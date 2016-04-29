@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h> 
+#include <netdb.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -52,12 +52,12 @@ int main(int argc, char *argv[])
         perror("ERROR connecting");
 
     for (i=0; i < 10; i++) {
-	sprintf (key, "key%d ", i);
-	if (send (sockfd, key, 20, 0) < 0)
-		perror ("ERROR sending key");
-	value = htonl (i);
-	if (send (sockfd, &value, sizeof (value), 0) < 0)
-		perror ("ERROR sending value");
+	     sprintf (key, "key%d ", i);
+
+       if (send (sockfd, key, 20, 0) < 0)  perror ("ERROR sending key");
+	     value = htonl (i);
+
+       if (send (sockfd, &value, sizeof (value), 0) < 0)  perror ("ERROR sending value");
     }
 
     printf ("Client: closing connection\n");
