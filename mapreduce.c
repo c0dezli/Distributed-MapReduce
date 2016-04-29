@@ -226,7 +226,6 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         perror("Client: ERROR connecting to server");
         return -1;
       } else
-        printf("Client %d: Connected with server, socketfd is %d.\n", i, mr->client_sockfd[i]);
 
       // Construct the map arguments
       struct args_helper *map_args;
@@ -296,7 +295,6 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       perror("Server: Cannot start socket listen.\n");
       return -1;
     }
-    printf("Server: Start listening for connections.\n");
 
     // Construct the reduce arguments
     struct args_helper *reduce_args;
@@ -333,7 +331,6 @@ mr_finish(struct map_reduce *mr) {
         return -1;
       }
     }
-    printf("Client: All threads killed.\n");
 
     // Close socket and file
     for(int i=0; i<(mr->nmaps); i++) {
@@ -346,7 +343,6 @@ mr_finish(struct map_reduce *mr) {
         return -1;
       }
     }
-    printf("Client: All sockets and file closed.\n");
 
     // Check status
     for(int i=0; i<(mr->nmaps); i++) {
@@ -392,39 +388,35 @@ mr_finish(struct map_reduce *mr) {
 int
 mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   if(kv==NULL) return -1;
-  uint32_t value;
+  uint32_t size;
 
   int x;
   
-  value = htonl(kv->keysz);
-  x = send(mr->client_sockfd[id], &value, sizeof(uint32_t), 0) ;
+  size = htonl(kv->keysz);
+  x = send(mr->client_sockfd[id], &size, sizeof(uint32_t), 0) ;
   if(x== -1) {
     perror("Client: Fail to send keysz");
     return -1;
   }
-  printf("Client: Send() for keysz returns %d, keysz is %d\n", x, kv->keysz);
   
   x = send(mr->client_sockfd[id], kv->key, kv->keysz, 0);
-  if( x== -1) {
+  if(x== -1) {
     perror("Client: Fail to send key");
     return -1;
   }
-  printf("Client: Send() for key returns %d, key is %s\n", x, (char*)kv->key);
 
-  value = htonl(kv->valuesz);
-  x = send(mr->client_sockfd[id], &value, sizeof(uint32_t), 0);
+  size = htonl(kv->valuesz);
+  x = send(mr->client_sockfd[id], &size, sizeof(uint32_t), 0);
   if(x == -1) {
     perror("Client: Fail to send valuesz");
     return -1;
   }
-  printf("Client: Send() for valuesz returns %d, kv-valuesz is %d.\n", x, kv->valuesz);
   
   x = send(mr->client_sockfd[id], kv->value, kv->valuesz, 0);
-  if( x == -1) {
+  if(x == -1) {
     perror("Client: Fail to send value");
     return -1;
   }
-  printf("Client: Send() for value returns %d, kv-value is %s.\n", x, (char*)kv->value);
   
   return 1;
 }
@@ -446,7 +438,6 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
     return 0;
   }
   kv->keysz = ntohl(size);
-  printf("Server: recv() for keysz returns %d, kv->keysz is %d.\n", receive_bytes, kv->keysz);
   
   // buffer = malloc(kv->keysz);
   receive_bytes = recv(mr->client_sockfd[id], kv->key, kv->keysz, MSG_WAITALL);
@@ -454,7 +445,6 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
     printf("Server: Client %d send 0.\n",id);
     return 0;
   }
-  printf("Server: recv() for key returns %d, kv->key is %s.\n", receive_bytes, (char *)kv->key);
 
   receive_bytes = recv(mr->client_sockfd[id], &size, sizeof(uint32_t), MSG_WAITALL);
   if(receive_bytes == 0)  {
@@ -462,17 +452,12 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
     return 0;
   }
   kv->valuesz = ntohl(size);
-  printf("Server: recv() for valuesz returns %d, kv->valuesz is %d.\n", receive_bytes, kv->valuesz);
  
-
-  // buffer = malloc(kv->valuesz);
   receive_bytes = recv(mr->client_sockfd[id], kv->value, kv->valuesz, MSG_WAITALL);
   if(receive_bytes == 0)  {
     printf("Server: Client %d send 0.\n",id);
     return 0;
   }
-  printf("Server: recv() for value returns %d, kv-value is %s.\n", receive_bytes, (char *)kv->value);
- // printf("Client: kv-value is %s\n",(char*)buffer);
 
   if(receive_bytes == 0)  {
     printf("Server: Client %d send 0.\n",id);
