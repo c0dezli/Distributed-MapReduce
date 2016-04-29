@@ -47,7 +47,7 @@ static void *map_wrapper(void* map_args) {
     perror("Client: ERROR connecting to server");
     return NULL;
   }
-  printf("Client %d: Connected with server, socketfd is %d.\n", args->id, args->mr->client_sockfd[i]);
+  printf("Client %d: Connected with server, socketfd is %d.\n", args->id, args->mr->client_sockfd[args->id]);
 
   // Call the map function and save the return value
   args->mr->mapfn_status[args->id] =
