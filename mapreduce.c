@@ -67,7 +67,6 @@ static void *reduce_wrapper(void* reduce_args) {
       perror("Error message");
       return NULL;
     }
-    fcntl(args->mr->client_sockfd[i], F_SETFL, O_NONBLOCK);
 
   }
   printf("Server: All clients connected!\n");
@@ -210,7 +209,6 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       perror("Server: Cannot open socket.\n");
       return -1;
     }
-    fcntl(mr->server_sockfd, F_SETFL, O_NONBLOCK);
 
     // Setup the address info
     mr->server_addr.sin_family = AF_INET;
@@ -269,7 +267,6 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         close(mr->client_sockfd[i]);
         perror("Client: Cannot open socket");
       }
-      fcntl(mr->client_sockfd[i], F_SETFL, O_NONBLOCK);
 
       // Setup the address info
       mr->server_addr.sin_family = AF_INET;
