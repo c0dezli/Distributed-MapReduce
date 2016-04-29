@@ -56,13 +56,13 @@ static void *reduce_wrapper(void* reduce_args) {
 
   //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
   // Connect all the clients
-  int socket_counter = 0;
-  while((args->mr->client_sockfd[socket_counter] = accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[socket_counter], &args->mr->client_addr_length)) >= 0){
-    if (args->mr->client_sockfd[socket_counter] < 0) {
-      printf("Server: Cannot connect client %d.\n", socket_counter);
+  for(int i=0; i<args->mr->n_threads; i++){
+    args->mr->client_sockfd[i] =
+      accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[i], &args->mr->client_addr_length)
+    if (args->mr->client_sockfd[i] < 0) {
+      printf("Server: Cannot connect client %d.\n", i);
       return NULL;
     }
-    socket_counter++;
   }
 
   printf("Server: All clients connected!\n");
@@ -398,7 +398,6 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
       kv_size = -1;
 
   // Block until some value is in buffer
-
   for(int i=0; i<3; i++){
     // Get Funtion Return Value
     if(i == 0){
