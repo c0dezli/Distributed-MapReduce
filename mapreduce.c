@@ -323,6 +323,7 @@ mr_finish(struct map_reduce *mr) {
       return -1;
   }
   else if (mr->client){
+    printf("Client: I'm going to suiside now!\n");
     // Wait all map function finish
     for(int i=0; i<(mr->nmaps); i++) {
       if(pthread_join(mr->map_threads[i], NULL)) {
@@ -330,6 +331,7 @@ mr_finish(struct map_reduce *mr) {
         return -1;
       }
     }
+    printf("Client: All threads killed.\n");
 
     // Close socket and file
     for(int i=0; i<(mr->nmaps); i++) {
@@ -342,6 +344,7 @@ mr_finish(struct map_reduce *mr) {
         return -1;
       }
     }
+    printf("Client: All sockets and file closed.\n");
 
     // Check status
     for(int i=0; i<(mr->nmaps); i++) {
