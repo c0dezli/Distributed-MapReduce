@@ -45,7 +45,6 @@ static void *map_wrapper(void* map_args) {
       args->map(args->mr, args->infd, args->id, args->nmaps);
   // Send a signal to mr_consume after the function returns
   // pthread_cond_signal(&args->mr->not_empty[args->id]);
-  printf("Client %d: Created Map thread\n", args->id);
   return NULL;
 }
 
@@ -357,11 +356,11 @@ mr_finish(struct map_reduce *mr) {
 /* Called by the Map function each time it produces a key-value pair */
 int
 mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
+  printf("Client: Current client id is %d.\n", id);
   //CLIENT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   // Lock
    pthread_mutex_lock(&mr->_lock[id]);
   // Get the kv_pair size
-   printf("Client: Trying to send value to server.\n");
    int kv_size = kv->keysz + kv->valuesz + 8;
    uint32_t value;
 
