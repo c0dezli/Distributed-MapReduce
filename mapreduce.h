@@ -83,7 +83,7 @@ struct map_reduce {
 		              *not_empty;
 	char            **buffer;
 
-	int n_threads,             				// Number of worker threads to use
+	int nmaps,             				// Number of worker threads to use
 		*size,												// bytes of kv pairs in each buffer
 		*infd, outfd,							  	// File discripter
 		*mapfn_status,

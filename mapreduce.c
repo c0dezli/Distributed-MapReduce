@@ -56,7 +56,7 @@ static void *reduce_wrapper(void* reduce_args) {
 
   //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
   // Connect all the clients
-  for(int i=0; i<args->mr->n_threads; i++){
+  for(int i=0; i<args->mr->nmaps; i++){
     socklen_t addrlen = sizeof(args->mr->client_addr[i]);
     args->mr->client_sockfd[i] =
       accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[i], &addrlen);
@@ -116,7 +116,7 @@ mr_create(map_fn map, reduce_fn reduce, int nmaps) {
    // Save the Parameters
    mr->map             = map;
    mr->reduce          = reduce;
-   mr->n_threads       = nmaps;
+   mr->nmaps       = nmaps;
 
    // File Descriptors
    mr->outfd           = -1;
@@ -165,7 +165,7 @@ mr_create(map_fn map, reduce_fn reduce, int nmaps) {
 /* Destroys and cleans up an existing instance of the MapReduce framework */
 void
 mr_destroy(struct map_reduce *mr) {
-  for(int i=0; i<mr->n_threads; i++){
+  for(int i=0; i<mr->nmaps; i++){
     free(mr->buffer[i]);
   }
   free(mr->buffer);
@@ -219,7 +219,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     }
 
     // Start Listen
-    if (listen(mr->server_sockfd, mr->n_threads) == -1 ) {
+    if (listen(mr->server_sockfd, mr->nmaps) == -1 ) {
       perror("Server: Cannot start socket listen.\n");
       return -1;
     }
@@ -228,12 +228,12 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
     // Construct the reduce arguments
     struct args_helper *reduce_args;
-  	reduce_args         = &(mr->args[mr->n_threads]);
+  	reduce_args         = &(mr->args[mr->nmaps]);
   	reduce_args->mr     = mr;
   	reduce_args->reduce = mr->reduce;
   	reduce_args->map    = mr->map;
   	reduce_args->outfd  = mr->outfd;
-  	reduce_args->nmaps  = mr->n_threads;
+  	reduce_args->nmaps  = mr->nmaps;
 
   	// Create reduce thread
 	  if (pthread_create(&mr->reduce_thread, NULL, &reduce_wrapper, (void *)reduce_args) != 0) {
@@ -246,12 +246,12 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
   if(mr->client)
   {
-  	// Create n threads for map function (n = n_threads)
-  	for(int i=0; i<(mr->n_threads); i++) {
+  	// Create n threads for map function (n = nmaps)
+  	for(int i=0; i<(mr->nmaps); i++) {
 
     	//Assign different socketfd to every map thread
       mr->infd[i] = open(path, O_WRONLY | O_CREAT | O_TRUNC, 644);
-    	if (mr->infd[i] == -1) {
+    	if (mr->infd[i] < 0) {
     	  close(mr->infd[i]);
     	  perror("Client: Cannot open input file");
     	  return -1;
@@ -259,7 +259,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 
       // Create socket
       mr->client_sockfd[i] = socket(AF_INET, SOCK_STREAM, 0);
-      if (mr->client_sockfd[i] == -1){
+      if (mr->client_sockfd[i] < 0){
         close(mr->infd[i]);
         close(mr->client_sockfd[i]);
         perror("Client: Cannot open socket");
@@ -290,7 +290,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       map_args->reduce = mr->reduce;
       map_args->infd   = mr->infd[i];
       map_args->id     = i;
-      map_args->nmaps  = mr->n_threads;
+      map_args->nmaps  = mr->nmaps;
 
       // Create map threads
       if(pthread_create(&mr->map_threads[i], NULL, &map_wrapper, (void *)map_args) != 0) {
@@ -324,7 +324,7 @@ mr_finish(struct map_reduce *mr) {
       perror("Server: Failed to close file");
       return -1;
     }
-    for(int i=0; i<(mr->n_threads); i++) {
+    for(int i=0; i<(mr->nmaps); i++) {
       if(close(mr->client_sockfd[i]) != 0){
         perror("Server: Failed to close client socket connection");
         return -1;
@@ -337,7 +337,7 @@ mr_finish(struct map_reduce *mr) {
   }
   else if (mr->client){
     // Wait all map function finish
-    for(int i=0; i<(mr->n_threads); i++) {
+    for(int i=0; i<(mr->nmaps); i++) {
       if(pthread_join(mr->map_threads[i], NULL)) {
         perror("Client: Failed to wait a map thead end");
         return -1;
@@ -345,7 +345,7 @@ mr_finish(struct map_reduce *mr) {
     }
 
     // Close socket and file
-    for(int i=0; i<(mr->n_threads); i++) {
+    for(int i=0; i<(mr->nmaps); i++) {
       if(close(mr->client_sockfd[i]) != 0){
         perror("Client: Failed to close socket connection");
         return -1;
@@ -357,7 +357,7 @@ mr_finish(struct map_reduce *mr) {
     }
 
     // Check status
-    for(int i=0; i<(mr->n_threads); i++) {
+    for(int i=0; i<(mr->nmaps); i++) {
       if (mr->mapfn_status[i] != 0)
         return -1;
       }
