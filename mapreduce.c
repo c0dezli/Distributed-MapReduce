@@ -315,7 +315,7 @@ mr_finish(struct map_reduce *mr) {
       return -1;
     }
 
-    // Close socket and file
+    // Close server socket and file
     if(close(mr->server_sockfd) != 0){
       perror("Server: Failed to close socket connection");
       return -1;
@@ -323,6 +323,12 @@ mr_finish(struct map_reduce *mr) {
     if(close(mr->outfd) != 0){
       perror("Server: Failed to close file");
       return -1;
+    }
+    for(int i=0; i<(mr->n_threads); i++) {
+      if(close(mr->client_sockfd[i]) != 0){
+        perror("Server: Failed to close client socket connection");
+        return -1;
+      }
     }
 
     // Check status
