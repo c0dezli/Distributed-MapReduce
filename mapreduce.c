@@ -381,11 +381,6 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
    int kv_size = kv->keysz + kv->valuesz + 8;
    int value;
 
-
-   recv(mr->client_sockfd[id], &value, sizeof(value), 0);
-   printf("Client %d, get value %d from server\n", id,  ntohl(value));
-
-
    value = htonl(1);
    if(send(mr->client_sockfd[id], &value, sizeof(value), 0) < 0) {
       perror("Client: ERROR sending map function status.");
@@ -432,11 +427,6 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   uint32_t value;
   // Block until some value is in buffer
   while(true){
-
-    value = htonl(1);
-    send(mr->client_sockfd[id], &value, sizeof(value), 0);
-    printf("Server: Send value %d to client %d\n", ntohl(value), id );
-
     // Test
     receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(value), 0);
     while(receive_bytes != sizeof(value)) {
