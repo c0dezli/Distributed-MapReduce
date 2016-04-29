@@ -57,7 +57,7 @@ static void *reduce_wrapper(void* reduce_args) {
   //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
   // Connect all the clients
   for(int i=0; i<args->mr->n_threads; i++){
-    int addrlen = sizeof(args->mr->client_addr[i]);
+    socklen_t addrlen = sizeof(args->mr->client_addr[i]);
     args->mr->client_sockfd[i] =
       accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[i], &addrlen);
     if (args->mr->client_sockfd[i] < 0) {
@@ -128,6 +128,8 @@ mr_create(map_fn map, reduce_fn reduce, int nmaps) {
    for(int i=0; i<nmaps; i++)
       mr->client_sockfd[i] = 0;
 
+   mr->client_addr    = malloc(nmaps * sizeof(struct sockaddr_in));
+
    // Threads
    mr->map_threads     = malloc(nmaps * sizeof(pthread_t));
    mr->mapfn_status    = malloc(nmaps * sizeof(int));
@@ -168,6 +170,7 @@ mr_destroy(struct map_reduce *mr) {
   }
   free(mr->buffer);
   free(mr->infd);
+  free(mr->client_addr);
   free(mr->client_sockfd);
   free(mr->map_threads);
   free(mr->mapfn_status);
