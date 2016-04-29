@@ -40,13 +40,18 @@ struct args_helper {
 static void *map_wrapper(void* map_args) {
   // Reconstruct the Arguments
   struct args_helper *args = (struct args_helper *) map_args;
+
+  // Connect to server
+  //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
+  if (connect(arg->mr->client_sockfd[args->id], (struct sockaddr *)&arg->mr->server_addr, sizeof(arg->mr->server_addr)) < 0){
+    perror("Client: ERROR connecting to server");
+    return -1;
+  }
+  printf("Client %d: Connected with server, socketfd is %d.\n", args->id, arg->mr->client_sockfd[i]);
+
   // Call the map function and save the return value
   args->mr->mapfn_status[args->id] =
       args->map(args->mr, args->infd, args->id, args->nmaps);
-  while(  args->mr->mapfn_status[args->id] == -1){
-    args->mr->mapfn_status[args->id] =
-        args->map(args->mr, args->infd, args->id, args->nmaps);
-  }
   // Send a signal to mr_consume after the function returns
   // pthread_cond_signal(&args->mr->not_empty[args->id]);
   printf("Client %d: Created Map thread\n", args->id);
@@ -214,7 +219,6 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       return -1;
     }
 
-
     // Setup the address info
     mr->server_addr.sin_family = AF_INET;
     mr->server_addr.sin_port = htons(port);
@@ -281,15 +285,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         return -1;
       }
 
-      // Connect to server
-      //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
-      if (connect(mr->client_sockfd[i], (struct sockaddr *)&mr->server_addr, sizeof(mr->server_addr)) < 0){
 
-        perror("Client: ERROR connecting to server");
-        return -1;
-      }
-
-      printf("Client %d: Connected with server, socketfd is %d.\n", i, mr->client_sockfd[i]);
 
       // Construct the map arguments
       struct args_helper *map_args;
