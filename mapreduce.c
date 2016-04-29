@@ -272,7 +272,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       perror("Server: Cannot open socket.\n");
       return -1;
     }
-
+    // http://stackoverflow.com/questions/15198834/bind-failed-error-address-already-in-use
     // Set server socket to allow multiple connections
     if (setsockopt(mr->server_sockfd, SOL_SOCKET, (SO_REUSEADDR | SO_REUSEPORT), &(int){1}, sizeof(int)) ==-1) {
       close(mr->outfd);
