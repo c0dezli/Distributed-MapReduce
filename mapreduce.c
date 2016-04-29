@@ -9,7 +9,6 @@
  * used for the *public-facing* API.
  */
 
-
 /* Header includes */
 #include <stdint.h>
 #include <stdio.h>
@@ -57,7 +56,6 @@ static void *reduce_wrapper(void* reduce_args) {
 
   //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
   // Connect all the clients
-  // Cite website:
   int socket_counter = 0;
   while((args->mr->client_sockfd[socket_counter] = accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[socket_counter], &args->mr->client_addr_length)) >= 0){
     if (args->mr->client_sockfd[socket_counter] < 0) {
@@ -65,10 +63,9 @@ static void *reduce_wrapper(void* reduce_args) {
       return NULL;
     }
     socket_counter++;
-    if(socket_counter+1 == args->mr->n_threads){
-      printf("Server: All clients connected!\n");
-    }
   }
+
+  printf("Server: All clients connected!\n");
 
   // Call the reduce function and save the return value
   args->mr->reducefn_status =
@@ -178,8 +175,6 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 {
   if(mr->server)
   {
-    int socket_counter = 0;
-    printf("Server: Hey! I'm running!\n");
   	// Open the output file
     mr->outfd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 644);
 
@@ -232,16 +227,12 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 	    perror("Server: Failed to create reduce thread");
 	    return -1;
     }
-    printf("Server: Start thread.\n");
-
   	// Success
   	return 0;
   }
 
   if(mr->client)
   {
-    printf("Client: Hey! I'm running!\n");
-
   	// Create n threads for map function (n = n_threads)
   	for(int i=0; i<(mr->n_threads); i++) {
 
@@ -252,7 +243,6 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
     	  perror("Client: Cannot open input file");
     	  return -1;
     	}
-      printf("Client: Opened input file\n");
 
       // Create socket
       mr->client_sockfd[i] = socket(AF_INET, SOCK_STREAM, 0);
@@ -261,7 +251,6 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         close(mr->client_sockfd[i]);
         perror("Client: Cannot open socket");
       }
-      printf("Client %d: Opened input socket\n", i);
 
       // Setup the address info
       mr->server_addr.sin_family = AF_INET;
@@ -270,8 +259,6 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         perror("Client: Cannot set ip");
         return -1;
       }
-
-      printf("Client %d: IP is set\n", i);
 
       // Connect to server
       //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
@@ -363,84 +350,89 @@ mr_finish(struct map_reduce *mr) {
 /* Called by the Map function each time it produces a key-value pair */
 int
 mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
- //  // Lock
- //  pthread_mutex_lock(&mr->_lock[id]);
- //  // Get the kv_pair size
- //  int kv_size = kv->keysz + kv->valuesz + 8;
- //
- //  // First check if the buffer is overflow
- //  while((mr->size[id]+kv_size) >= MR_BUFFER_SIZE) {
- //    pthread_cond_wait(&mr->not_full[id], &mr->_lock[id]); // wait
- //  }
- //
- //  if(0){
- //    printf ("Client: closing connection\n");
- //    // close (mr->client_sockfd[i]);
- //  }
- // //sends the key-value pair kv to the reducer using the socket for the
- // //mapper with the given ID.
- // if(send(id, &kv->keysz, 4, 0 ) < 0){
- //    perror ("ERROR sending key size");
- //    return -1;
- //    }
- // if(send(id, kv->key, kv->keysz, 0 ) < 0){
- //    perror ("ERROR sending key");
- //    return -1;
- //    }
- // if(send(id, &kv->valuesz, 4, 0 ) < 0){
- //    perror ("ERROR sending value size");
- //    return -1;
- //    }
- // if(send(id, kv->value, kv->valuesz, 0) < 0){
- //    perror ("ERROR sending value");
- //    return -1;
- //    }
- //
- //  //Send the signal
- //  pthread_cond_signal (&mr->not_empty[id]);
- //  // Unlock
- //  pthread_mutex_unlock(&mr->_lock[id]);
- //  // Success
-	return 1;
+  // Lock
+  pthread_mutex_lock(&mr->_lock[id]);
+  // Get the kv_pair size
+  int kv_size = kv->keysz + kv->valuesz + 8;
+
+  // First check if the buffer is overflow
+  while((mr->size[id]+kv_size) >= MR_BUFFER_SIZE) {
+    pthread_cond_wait(&mr->not_full[id], &mr->_lock[id]); // wait
+  }
+  int size = 4 + &kv->keysz + 4 + &kv->valuesz;//total size of kv
+
+  if(send(mr->client_sockfd[id], kv, size, 0 ) < 0){
+    perror ("ERROR sending key size");
+    return -1;
+  }
+
+  // Copy the value
+  memmove(&mr->buffer[id][mr->size[id]], &kv->keysz, 4);
+	mr->size[id] += 4;
+	memmove(&mr->buffer[id][mr->size[id]], kv->key, kv->keysz);
+	mr->size[id] += kv->keysz;
+	memmove(&mr->buffer[id][mr->size[id]], &kv->valuesz, 4);
+	mr->size[id] += 4;
+	memmove(&mr->buffer[id][mr->size[id]], kv->value, kv->valuesz);
+	mr->size[id] += kv->valuesz;
+
+  //Send the signal
+  pthread_cond_signal (&mr->not_empty[id]);
+  // // Unlock
+  pthread_mutex_unlock(&mr->_lock[id]);
+  // Success
+ return 1;
 }
 
 /* Called by the Reduce function to consume a key-value pair */
 int
 mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
+  char * buffer[50];
+  int fn_result = -1, receive;
+  int size = 4 + &kv->keysz + 4 + &kv->valuesz;//total size of kv
+  //for(int i=0; i<2; i++){
+    bzero (buffer,50);
+    // First Check Funtion Return Value
+    /*if(i == 0){
+      result = recv(mr->client_sockfd[id], &fn_result, 4, 0);
+      if(htonl(fn_result) == 0) return 0;
+    }
+    */
+    else if(i == 1){
+      result = recv(mr->client_sockfd[id], kv, size, 0);
+    }
+    if(result == size){
 
+        printf("Server: Recieved KV. Correct size\n")
+    }
+    if (result == 0) {
+        printf ("Server: client closed connection\n");
+        return 0; //return 0 if mapper returns without producing another pair
+    }
+    if (result < 0) {
+        perror("ERROR reading key from socket");
+        return -1; //return -1 on error
+    }
+    printf("Server received: key=%s, value=%d\n",buffer, value);
 
+  //}
 
   // pthread_mutex_lock(&mr->_lock[id]); // lock
   //
-  //
   // // Check the size to make sure there is a value
   // while(mr->size[id] <= 0) {
-  //   // if(mr->mapfn_status[id] == 0) // Map function done its work
+  //   if(mr->mapfn_status[id] == 0) // Map function done its work
   //   //   return 0;
   //   // Wait for signal
   //   pthread_cond_wait(&mr->not_empty[id], &mr->_lock[id]);
   // }
-  //   /*
-  //    Receives the next key-value pair from the mapper with the given ID
-  //   and writes it in the locations indicated by kv.
-  //    If no pair is available, this function should block
-  //   until one is produced or the speci ed mapper thread returns.
-  //     Returns 1 if successful, 0 if the mapper returns without producing
-  //    another pair, and -1 on error
-  //   */
-  //   /*
-  //   Note:  The  caller  is  responsible  for  allocating  memory  for  the  key  and  value,  and  will  specify the size of the
-  //   available space in the corresponding size  fields.  The
-  //   mr_consume function should update the size fields
-  //   to indicate the actual number of bytes placed in each
-  //   */
   //
   //     // Copy the value
   //     int offset = 0;
   //   //TODO recieve values
   //
   //
-  //   /*  memmove(&kv->keysz, &mr->buffer[id][offset], 4);
+  //     memmove(&kv->keysz, &mr->buffer[id][offset], 4);
   //   	offset += 4;
   //   	memmove(kv->key, &mr->buffer[id][offset], kv->keysz);
   //   	offset += kv->keysz;
@@ -448,7 +440,7 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   //   	offset += 4;
   //   	memmove(kv->value, &mr->buffer[id][offset], kv->valuesz);
   //   	offset += kv->valuesz;
-  //   */
+  //
   //     // Decrease size
   //     mr->size[id] -= offset;
   //   //TODO send the client the amount of space left????
@@ -458,6 +450,6 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   // pthread_cond_signal (&mr->not_full[id]);
   // // Unlock
   // pthread_mutex_unlock(&mr->_lock[id]);
-  // // Success
+  // Success
   return 0;
 }
