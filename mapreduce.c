@@ -45,7 +45,7 @@ static void *map_wrapper(void* map_args) {
       args->map(args->mr, args->infd, args->id, args->nmaps);
   // Send a signal to mr_consume after the function returns
   // pthread_cond_signal(&args->mr->not_empty[args->id]);
-  printf("Client: Created Map thread\n");
+  printf("Client %d: Created Map thread\n", args->id);
   return NULL;
 }
 
@@ -61,11 +61,13 @@ static void *reduce_wrapper(void* reduce_args) {
     socklen_t addrlen = sizeof(args->mr->client_addr[i]);
     args->mr->client_sockfd[i] =
       accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[i], &addrlen);
+
     if (args->mr->client_sockfd[i] < 0) {
       printf("Server: Cannot build connection for client %d.\n", i);
       perror("Error message");
       return NULL;
     }
+
   }
   printf("Server: All clients connected!\n");
 
@@ -281,7 +283,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         return -1;
       }
 
-      printf("Client %d: Connected with server.\n", i);
+      printf("Client %d: Connected with server, socketfd is %d.\n", i, mr->client_sockfd[i]);
 
       // Construct the map arguments
       struct args_helper *map_args;
