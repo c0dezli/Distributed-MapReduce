@@ -442,6 +442,7 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
       receive_bytes = recv(mr->client_sockfd[id], &kv_size, 4, 0);
       if(receive_bytes != 4) {
         receive_bytes_check(receive_bytes, id);
+        perror("WTF");
         return -1;
       }
 
