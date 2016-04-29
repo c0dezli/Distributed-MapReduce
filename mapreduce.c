@@ -428,12 +428,14 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
     //SERVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     //Get Funtion Return Value
-    printf("mr->client_sockfd[id] is %d", mr->client_sockfd[id]);
-    receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
+    printf("mr->client_sockfd[id] is %d.\n", mr->client_sockfd[id]);
+
+    receive_bytes = recv(mr->client_sockfd[id], &fn_result, sizeof(fn_result), 0);
     printf("WHat is fuck will you be! recive_bytes = %d", receive_bytes);
-    while(receive_bytes != 4) {
-      receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
-    }
+    // while(receive_bytes != sizeof(fn_result)) {
+    //   receive_bytes = recv(mr->client_sockfd[id], &fn_result, sizeof(fn_result), 0);
+    // }
+    printf("receive_bytes = %d\n", receive_bytes);
     //SERVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     // Get the kv pair size
