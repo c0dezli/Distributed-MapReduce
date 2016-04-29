@@ -63,8 +63,6 @@ static void *reduce_wrapper(void* reduce_args) {
       return NULL;
     }
     socket_counter++;
-
-    if(socket_counter == args->mr->n_threads - 1) break;
   }
 
   printf("Server: All clients connected!\n");
@@ -73,6 +71,18 @@ static void *reduce_wrapper(void* reduce_args) {
   args->mr->reducefn_status =
     args->reduce(args->mr, args->outfd, args->nmaps);
   return NULL;
+}
+
+
+void receive_bytes_check(int receive_bytes, int id){
+ if (receive_bytes == 0) {
+     printf ("Server: client %d closed connection\n", id);
+     return 0; //return 0 if mapper returns without producing another pair
+ }
+ if (receive_bytes < 0) {
+     perror("Server: ERROR reading key from socket, client %d.\n",id);
+     return -1;
+ }
 }
 
 /*
@@ -385,74 +395,38 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
 int
 mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   //char * buffer[50];
-  int fn_result = -1, receive_bytes;
+  int fn_result = -1,
+      receive_bytes = -1,
+      kv_size = -1;
 
   // Block until some value is in buffer
-  while(mr->size[id] == 0){
-    continue;
-  }
-  int size;
+
   for(int i=0; i<3; i++){
-    // bzero (buffer,50);
-    // First Check Funtion Return Value
+    // Get Funtion Return Value
     if(i == 0){
       receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
-      if(htonl(fn_result) == 0) return 0;
-      else size = receive_bytes;
-    }
-    else if(i == 1){
-      receive_bytes = recv(mr->client_sockfd[id], kv, size, 0);
-    }
-    if(receive_bytes == size){
-
-        printf("Server: Recieved KV. Correct size\n");
-    }
-    if (receive_bytes == 0) {
-        printf ("Server: client closed connection\n");
-        return 0; //return 0 if mapper returns without producing another pair
-    }
-    if (receive_bytes < 0) {
-        perror("ERROR reading key from socket");
+      if(receive_bytes != 4) {
+        receive_bytes_check(receive_bytes, id);
         return -1;
+      }
+      else if(htonl(fn_result) == 0) return 0;
     }
-
-  //}
-
-  // pthread_mutex_lock(&mr->_lock[id]); // lock
-  //
-  // // Check the size to make sure there is a value
-  // while(mr->size[id] <= 0) {
-  //   if(mr->mapfn_status[id] == 0) // Map function done its work
-  //   //   return 0;
-  //   // Wait for signal
-  //   pthread_cond_wait(&mr->not_empty[id], &mr->_lock[id]);
-  // }
-  //
-  //     // Copy the value
-  //     int offset = 0;
-  //   //TODO recieve values
-  //
-  //
-  //     memmove(&kv->keysz, &mr->buffer[id][offset], 4);
-  //   	offset += 4;
-  //   	memmove(kv->key, &mr->buffer[id][offset], kv->keysz);
-  //   	offset += kv->keysz;
-  //   	memmove(&kv->valuesz, &mr->buffer[id][offset], 4);
-  //   	offset += 4;
-  //   	memmove(kv->value, &mr->buffer[id][offset], kv->valuesz);
-  //   	offset += kv->valuesz;
-  //
-  //     // Decrease size
-  //     mr->size[id] -= offset;
-  //   //TODO send the client the amount of space left????
-  //   //  memmove(&mr->buffer[id][0], &mr->buffer[id][offset], (MR_BUFFER_SIZE - offset));
-  //
-  // // Send Signal
-  // pthread_cond_signal (&mr->not_full[id]);
-  // // Unlock
-  // pthread_mutex_unlock(&mr->_lock[id]);
-  // Success
-
-}
+    // Get the kv pair size
+    else if(i == 1){
+      receive_bytes = recv(mr->client_sockfd[id], kv_size, 4, 0);
+      if(receive_bytes != 4) {
+        receive_bytes_check(receive_bytes, id);
+        return -1;
+      }
+    }
+    // Get the kv pair
+    else {
+      receive_bytes = recv(mr->client_sockfd[id], kv, kv_size, 0);
+      if(receive_bytes != kv_size) {
+        receive_bytes_check(receive_bytes, id);
+        return -1;
+      }
+    }
+  }
   return 0;
 }
