@@ -42,9 +42,10 @@ static void *map_wrapper(void* map_args) {
   struct args_helper *args = (struct args_helper *) map_args;
   // Call the map function and save the return value
   args->mr->mapfn_status[args->id] =
-      args->map(args->mr, args->infd,  args->id, args->nmaps);
+      args->map(args->mr, args->infd, args->id, args->nmaps);
   // Send a signal to mr_consume after the function returns
-  //pthread_cond_signal(&args->mr->not_empty[args->id]);
+  // pthread_cond_signal(&args->mr->not_empty[args->id]);
+  printf("Client: Created Map thread\n");
   return NULL;
 }
 
@@ -76,12 +77,12 @@ static void *reduce_wrapper(void* reduce_args) {
 
 
 void receive_bytes_check(int receive_bytes, int id){
- if (receive_bytes == 0) {
-     printf("Server: client %d send nothing\n", id);
- }
- if (receive_bytes < 0) {
-     printf("Server: ERROR reading key from socket, client %d.\n",id);
- }
+   if (receive_bytes == 0) {
+       printf("Server: client %d send nothing\n", id);
+   }
+   if (receive_bytes < 0) {
+       printf("Server: ERROR reading key from socket, client %d.\n", id);
+   }
 }
 
 /*
@@ -372,6 +373,7 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   // Lock
   // pthread_mutex_lock(&mr->_lock[id]);
   // Get the kv_pair size
+   printf("Client: Trying to send value to server.\n");
    int kv_size = kv->keysz + kv->valuesz + 8;
    int value;
 
@@ -407,7 +409,7 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   // // Unlock
   // pthread_mutex_unlock(&mr->_lock[id]);
   // Success
- return 1;
+ return 0;
 }
 
 /* Called by the Reduce function to consume a key-value pair */
