@@ -408,11 +408,11 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
     if (mr->client_sockfd[i] < 0) {
       printf("Server: Cannot build connection for client %d.\n", i);
       perror("Error message");
-      return NULL;
+      return -1;
     }
 
   }
-  
+
   printf("Server: All clients connected!\n");
   //char * buffer[50];
   int fn_result = -1,
