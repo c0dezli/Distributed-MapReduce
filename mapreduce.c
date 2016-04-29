@@ -76,16 +76,6 @@ static void *reduce_wrapper(void* reduce_args) {
   return NULL;
 }
 
-
-void receive_bytes_check(int receive_bytes, int id){
-   if (receive_bytes == 0) {
-       perror("Server: client send nothing\n");
-   }
-   if (receive_bytes < 0) {
-       printf("Server: ERROR reading key from socket, client %d.\n", id);
-   }
-}
-
 /*
 Refs:
 http://stackoverflow.com/questions/29350073/invalid-write-of-size-8-after-a-malloc
@@ -440,16 +430,24 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
 
     // Get the kv pair size
       receive_bytes = recv(mr->client_sockfd[id], &kv_size, 4, 0);
-      if(receive_bytes != 4) {
-        receive_bytes_check(receive_bytes, id);
+      if(receive_bytes != 4) {   if (receive_bytes == 0) {
+             perror("Server: client send nothing\n");
+         }
+         if (receive_bytes < 0) {
+             printf("Server: ERROR reading key from socket, client %d.\n", id);
+         }
         perror("WTF");
         return -1;
       }
 
     // Get the kv pair
       receive_bytes = recv(mr->client_sockfd[id], kv, kv_size, 0);
-      if(receive_bytes != kv_size) {
-        receive_bytes_check(receive_bytes, id);
+      if(receive_bytes != kv_size) {   if (receive_bytes == 0) {
+             perror("Server: client send nothing\n");
+         }
+         if (receive_bytes < 0) {
+             printf("Server: ERROR reading key from socket, client %d.\n", id);
+         }
         return -1;
       }
 
