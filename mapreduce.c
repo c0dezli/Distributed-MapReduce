@@ -261,7 +261,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
   	for(int i=0; i<(mr->nmaps); i++) {
 
     	//Assign different socketfd to every map thread
-      mr->infd[i] = open(inpath, O_RDONLY, 644)
+      mr->infd[i] = open(path, O_RDONLY, 644);
     	if (mr->infd[i] < 0) {
     	  close(mr->infd[i]);
     	  perror("Client: Cannot open input file");
