@@ -1,8 +1,7 @@
 == Team members ==
-(put everyone's name here)
 
-== Performance evaluation ==
-
+Xiang Li xpl5016
+Jesse Rong jbr5205
 
 == Sources consulted ==
 (please cite here as well as in comments by the relevant code)
@@ -18,3 +17,5 @@ http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
 
 
 ./mr-trace -c 5 127.0.1.255 2560
+
+./mr-trace -s 5 127.0.1.255 2560
