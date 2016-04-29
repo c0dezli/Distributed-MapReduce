@@ -76,12 +76,10 @@ static void *reduce_wrapper(void* reduce_args) {
 
 void receive_bytes_check(int receive_bytes, int id){
  if (receive_bytes == 0) {
-     printf ("Server: client %d closed connection\n", id);
-     return 0; //return 0 if mapper returns without producing another pair
+     printf("Server: client %d closed connection\n", id);
  }
  if (receive_bytes < 0) {
-     perror("Server: ERROR reading key from socket, client %d.\n",id);
-     return -1;
+     printf("Server: ERROR reading key from socket, client %d.\n",id);
  }
 }
 
@@ -413,7 +411,7 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
     }
     // Get the kv pair size
     else if(i == 1){
-      receive_bytes = recv(mr->client_sockfd[id], kv_size, 4, 0);
+      receive_bytes = recv(mr->client_sockfd[id], &kv_size, 4, 0);
       if(receive_bytes != 4) {
         receive_bytes_check(receive_bytes, id);
         return -1;
