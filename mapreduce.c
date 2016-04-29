@@ -401,13 +401,13 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
    // Connect all the clients
 
      socklen_t addrlen = sizeof(mr->client_addr[id]);
-     args->mr->client_sockfd[id] =
+     mr->client_sockfd[id] =
        accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[id], &addrlen);
 
      if (args->mr->client_sockfd[id] < 0) {
        printf("Server: Cannot build connection for client %d.\n", id);
        perror("Error message");
-       return NULL;
+       return -1;
      }
    printf("Server: Client %d connected!\n", id);
 
