@@ -404,7 +404,7 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
      mr->client_sockfd[id] =
        accept(mr->server_sockfd, (struct sockaddr *)&mr->client_addr[id], &addrlen);
 
-     if (args->mr->client_sockfd[id] < 0) {
+     if (mr->client_sockfd[id] < 0) {
        printf("Server: Cannot build connection for client %d.\n", id);
        perror("Error message");
        return -1;
