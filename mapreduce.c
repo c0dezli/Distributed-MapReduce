@@ -40,15 +40,6 @@ struct args_helper {
 static void *map_wrapper(void* map_args) {
   // Reconstruct the Arguments
   struct args_helper *args = (struct args_helper *) map_args;
-
-  // Connect to server
-  //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
-  if (connect(args->mr->client_sockfd[args->id], (struct sockaddr *)&args->mr->server_addr, sizeof(args->mr->server_addr)) < 0){
-    perror("Client: ERROR connecting to server");
-    return NULL;
-  }
-  printf("Client %d: Connected with server, socketfd is %d.\n", args->id, args->mr->client_sockfd[args->id]);
-
   // Call the map function and save the return value
   args->mr->mapfn_status[args->id] =
       args->map(args->mr, args->infd, args->id, args->nmaps);
@@ -76,7 +67,6 @@ static void *reduce_wrapper(void* reduce_args) {
       perror("Error message");
       return NULL;
     }
-
   }
   printf("Server: All clients connected!\n");
 
@@ -281,6 +271,14 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       mr->server_addr.sin_port = htons(port);
       inet_aton(ip, &mr->server_addr.sin_addr);
 
+      // Connect to server
+      //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
+      if (connect(mr->client_sockfd[i], (struct sockaddr *)&mr->server_addr, sizeof(mr->server_addr)) < 0){
+        perror("Client: ERROR connecting to server");
+        return NULL;
+      } else
+        printf("Client %d: Connected with server, socketfd is %d.\n", i, mr->client_sockfd[i]);
+
       // Construct the map arguments
       struct args_helper *map_args;
       map_args         = &(mr->args[i]);
@@ -370,7 +368,7 @@ mr_finish(struct map_reduce *mr) {
 int
 mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   // Lock
-  // pthread_mutex_lock(&mr->_lock[id]);
+   pthread_mutex_lock(&mr->_lock[id]);
   // Get the kv_pair size
    printf("Client: Trying to send value to server.\n");
    int kv_size = kv->keysz + kv->valuesz + 8;
@@ -404,10 +402,10 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
 
 
   //Send the signal
-  // pthread_cond_signal (&mr->not_empty[id]);
-  // // Unlock
-  // pthread_mutex_unlock(&mr->_lock[id]);
-  // Success
+  //pthread_cond_signal (&mr->not_empty[id]);
+  // Unlock
+  pthread_mutex_unlock(&mr->_lock[id]);
+  //Success
   close(mr->client_sockfd[id]);
   return 0;
 }
@@ -415,6 +413,8 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
 /* Called by the Reduce function to consume a key-value pair */
 int
 mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
+  // Lock
+   pthread_mutex_lock(&mr->_lock[id]);
   //char * buffer[50];
   int fn_result = -1,
       receive_bytes = -1,
@@ -454,4 +454,6 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
 
   }
   return 0;
+  // Unlock
+  pthread_mutex_unlock(&mr->_lock[id]);
 }
