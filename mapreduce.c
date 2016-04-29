@@ -43,11 +43,11 @@ static void *map_wrapper(void* map_args) {
 
   // Connect to server
   //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
-  if (connect(arg->mr->client_sockfd[args->id], (struct sockaddr *)&arg->mr->server_addr, sizeof(arg->mr->server_addr)) < 0){
+  if (connect(args->mr->client_sockfd[args->id], (struct sockaddr *)&args->mr->server_addr, sizeof(args->mr->server_addr)) < 0){
     perror("Client: ERROR connecting to server");
     return -1;
   }
-  printf("Client %d: Connected with server, socketfd is %d.\n", args->id, arg->mr->client_sockfd[i]);
+  printf("Client %d: Connected with server, socketfd is %d.\n", args->id, args->mr->client_sockfd[i]);
 
   // Call the map function and save the return value
   args->mr->mapfn_status[args->id] =
