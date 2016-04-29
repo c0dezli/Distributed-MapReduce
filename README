@@ -6,6 +6,10 @@ Jesse Rong jbr5205
 == Description ==
 
 Our code passes up to unit test 40. The professor said that it is acceptable because for the unit tests above 40, the synch problems are from project 3. He said there is no need to test synchronization for sockets.    
+We had some problems with getting the client and server to communicate. We also had problems with send() and recv().
+
+Our code's sockets follow the structure of the demo codes. 
+
 
 == Sources consulted ==
 (please cite here as well as in comments by the relevant code)
