@@ -54,6 +54,13 @@ static void *reduce_wrapper(void* reduce_args) {
   // Reconstruct the Arguments
   struct args_helper *args = (struct args_helper *) reduce_args;
 
+  // Start Listen
+  if (listen(args->mr->server_sockfd, args->nmaps) == -1 ) {
+    perror("Server: Cannot start socket listen.\n");
+    return -1;
+  }
+  printf("Server: Start listening for connections.\n");
+
   //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
   // Connect all the clients
   for(int i=0; i<args->mr->nmaps; i++){
@@ -209,12 +216,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       return -1;
     }
 
-    // Start Listen
-    if (listen(mr->server_sockfd, mr->nmaps) == -1 ) {
-      perror("Server: Cannot start socket listen.\n");
-      return -1;
-    }
-    printf("Server: Start listening for connections.\n");
+
 
     // Construct the reduce arguments
     struct args_helper *reduce_args;
