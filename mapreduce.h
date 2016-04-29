@@ -101,7 +101,6 @@ struct map_reduce {
 	int                server_sockfd,
 										 *client_sockfd;
 
-	socklen_t					 client_addr_length;
 	uint16_t           port;
 
 	struct hostent     *hostname;

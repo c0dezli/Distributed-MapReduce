@@ -57,8 +57,9 @@ static void *reduce_wrapper(void* reduce_args) {
   //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
   // Connect all the clients
   for(int i=0; i<args->mr->n_threads; i++){
+    int addrlen = sizeof(args->mr->client_addr[i]);
     args->mr->client_sockfd[i] =
-      accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[i], &args->mr->client_addr_length);
+      accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[i], &addrlen);
     if (args->mr->client_sockfd[i] < 0) {
       printf("Server: Cannot build connection for client %d.\n", i);
       perror("Error message");
@@ -126,7 +127,6 @@ mr_create(map_fn map, reduce_fn reduce, int nmaps) {
    mr->client_sockfd   = malloc(nmaps * sizeof(int));
    for(int i=0; i<nmaps; i++)
       mr->client_sockfd[i] = 0;
-   mr->client_addr_length = sizeof(struct sockaddr_in);
 
    // Threads
    mr->map_threads     = malloc(nmaps * sizeof(pthread_t));
