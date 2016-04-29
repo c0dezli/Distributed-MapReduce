@@ -43,6 +43,10 @@ static void *map_wrapper(void* map_args) {
   // Call the map function and save the return value
   args->mr->mapfn_status[args->id] =
       args->map(args->mr, args->infd, args->id, args->nmaps);
+  while(  args->mr->mapfn_status[args->id] == -1){
+    args->mr->mapfn_status[args->id] =
+        args->map(args->mr, args->infd, args->id, args->nmaps);
+  }
   // Send a signal to mr_consume after the function returns
   // pthread_cond_signal(&args->mr->not_empty[args->id]);
   printf("Client %d: Created Map thread\n", args->id);
@@ -67,6 +71,7 @@ static void *reduce_wrapper(void* reduce_args) {
       perror("Error message");
       return NULL;
     }
+    fcntl(args->mr->client_sockfd[i], F_SETFL, O_NONBLOCK);
 
   }
   printf("Server: All clients connected!\n");
@@ -209,6 +214,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       perror("Server: Cannot open socket.\n");
       return -1;
     }
+    fcntl(mr->server_sockfd, F_SETFL, O_NONBLOCK);
 
     // Setup the address info
     mr->server_addr.sin_family = AF_INET;
@@ -267,6 +273,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
         close(mr->client_sockfd[i]);
         perror("Client: Cannot open socket");
       }
+      fcntl(mr->client_sockfd[i], F_SETFL, O_NONBLOCK);
 
       // Setup the address info
       mr->server_addr.sin_family = AF_INET;
@@ -279,6 +286,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
       // Connect to server
       //http://www.cse.psu.edu/~djp284/cmpsc311-s15/slides/25-networking.pdf
       if (connect(mr->client_sockfd[i], (struct sockaddr *)&mr->server_addr, sizeof(mr->server_addr)) < 0){
+
         perror("Client: ERROR connecting to server");
         return -1;
       }
@@ -326,12 +334,6 @@ mr_finish(struct map_reduce *mr) {
     if(close(mr->outfd) != 0){
       perror("Server: Failed to close file");
       return -1;
-    }
-    for(int i=0; i<(mr->nmaps); i++) {
-      if(close(mr->client_sockfd[i]) != 0){
-        perror("Server: Failed to close client socket connection");
-        return -1;
-      }
     }
 
     // Check status
@@ -418,7 +420,8 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   // // Unlock
   // pthread_mutex_unlock(&mr->_lock[id]);
   // Success
- return 0;
+  close(mr->client_sockfd[id]);
+  return 0;
 }
 
 /* Called by the Reduce function to consume a key-value pair */
