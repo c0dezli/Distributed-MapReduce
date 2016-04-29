@@ -425,7 +425,6 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
     if (receive_bytes < 0) {
         printf("Server: ERROR reading key from socket, client %d.\n", id);
     }
-    perror("WTF");
 
     return -1;
   }
@@ -442,6 +441,7 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
 
     //Get Funtion Return Value
     receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
+    printf("WHat is fuck will you be! recive_bytes = %d", receive_bytes);
     if(receive_bytes != 4) {
       if (receive_bytes == 0) {
           perror("Server: client send nothing\n");
@@ -449,7 +449,6 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
       if (receive_bytes < 0) {
           printf("Server: ERROR reading key from socket, client %d.\n", id);
       }
-      perror("WTF");
 
       return -1;
     }
@@ -465,7 +464,6 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
          if (receive_bytes < 0) {
              printf("Server: ERROR reading key from socket, client %d.\n", id);
          }
-        perror("WTF");
         return -1;
       }
       //SERVER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -478,7 +476,6 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
          if (receive_bytes < 0) {
              printf("Server: ERROR reading key from socket, client %d.\n", id);
          }
-         perror("WTF");
 
         return -1;
       }
