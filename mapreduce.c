@@ -351,35 +351,30 @@ mr_finish(struct map_reduce *mr) {
 int
 mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   // Lock
-  pthread_mutex_lock(&mr->_lock[id]);
+  // pthread_mutex_lock(&mr->_lock[id]);
   // Get the kv_pair size
-  int kv_size = kv->keysz + kv->valuesz + 8;
+   int kv_size = kv->keysz + kv->valuesz + 8;
+   // Send the map function status
+   if(send(mr->client_sockfd[id], &mr->mapfn_status[id]), 4, 0) < 0) {
+     perror("Client: ERROR sending map function status.");
+     return -1;
+   }
 
-  // First check if the buffer is overflow
-  while((mr->size[id]+kv_size) >= MR_BUFFER_SIZE) {
-    pthread_cond_wait(&mr->not_full[id], &mr->_lock[id]); // wait
-  }
-  int size = 4 + &kv->keysz + 4 + &kv->valuesz;//total size of kv
+   if(send(mr->client_sockfd[id], &kv_size, 4) < 0) {
+     perror("Client: ERROR sending kv pair size");
+     return -1;
+   }
 
-  if(send(mr->client_sockfd[id], kv, size, 0 ) < 0){
-    perror ("ERROR sending key size");
-    return -1;
-  }
+   if(send(mr->client_sockfd[id], kv, kv_size, 0 ) < 0){
+      perror("Client: ERROR sending kv pair");
+      return -1;
+    }
 
-  // Copy the value
-  memmove(&mr->buffer[id][mr->size[id]], &kv->keysz, 4);
-	mr->size[id] += 4;
-	memmove(&mr->buffer[id][mr->size[id]], kv->key, kv->keysz);
-	mr->size[id] += kv->keysz;
-	memmove(&mr->buffer[id][mr->size[id]], &kv->valuesz, 4);
-	mr->size[id] += 4;
-	memmove(&mr->buffer[id][mr->size[id]], kv->value, kv->valuesz);
-	mr->size[id] += kv->valuesz;
 
   //Send the signal
-  pthread_cond_signal (&mr->not_empty[id]);
+  // pthread_cond_signal (&mr->not_empty[id]);
   // // Unlock
-  pthread_mutex_unlock(&mr->_lock[id]);
+  // pthread_mutex_unlock(&mr->_lock[id]);
   // Success
  return 1;
 }
@@ -387,31 +382,35 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
 /* Called by the Reduce function to consume a key-value pair */
 int
 mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
-  char * buffer[50];
-  int fn_result = -1, receive;
-  int size = 4 + &kv->keysz + 4 + &kv->valuesz;//total size of kv
-  //for(int i=0; i<2; i++){
-    bzero (buffer,50);
+  //char * buffer[50];
+  int fn_result = -1, receive_bytes;
+
+  // Block until some value is in buffer
+  while(mr->size[id] == 0){
+    continue;
+  }
+
+  for(int i=0; i<3; i++){
+    // bzero (buffer,50);
     // First Check Funtion Return Value
-    /*if(i == 0){
-      result = recv(mr->client_sockfd[id], &fn_result, 4, 0);
+    if(i == 0){
+      receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
       if(htonl(fn_result) == 0) return 0;
     }
-    */
     else if(i == 1){
-      result = recv(mr->client_sockfd[id], kv, size, 0);
+      receive_bytes = recv(mr->client_sockfd[id], kv, size, 0);
     }
-    if(result == size){
+    if(receive_bytes == size){
 
         printf("Server: Recieved KV. Correct size\n")
     }
-    if (result == 0) {
+    if (receive_bytes == 0) {
         printf ("Server: client closed connection\n");
         return 0; //return 0 if mapper returns without producing another pair
     }
-    if (result < 0) {
+    if (receive_bytes < 0) {
         perror("ERROR reading key from socket");
-        return -1; //return -1 on error
+        return -1;
     }
     printf("Server received: key=%s, value=%d\n",buffer, value);
 
