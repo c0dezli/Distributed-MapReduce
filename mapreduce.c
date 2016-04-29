@@ -55,21 +55,6 @@ static void *reduce_wrapper(void* reduce_args) {
   // Reconstruct the Arguments
   struct args_helper *args = (struct args_helper *) reduce_args;
 
-  //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
-  // Connect all the clients
-  for(int i=0; i<args->mr->nmaps; i++){
-    socklen_t addrlen = sizeof(args->mr->client_addr[i]);
-    args->mr->client_sockfd[i] =
-      accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[i], &addrlen);
-
-    if (args->mr->client_sockfd[i] < 0) {
-      printf("Server: Cannot build connection for client %d.\n", i);
-      perror("Error message");
-      return NULL;
-    }
-  }
-  printf("Server: All clients connected!\n");
-
   // Call the reduce function and save the return value
   args->mr->reducefn_status =
     args->reduce(args->mr, args->outfd, args->nmaps);
@@ -411,6 +396,22 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
 
   // Lock
    pthread_mutex_lock(&mr->_lock[id]);
+
+   //http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
+   // Connect all the clients
+
+     socklen_t addrlen = sizeof(mr->client_addr[id]);
+     args->mr->client_sockfd[id] =
+       accept(args->mr->server_sockfd, (struct sockaddr *)&args->mr->client_addr[id], &addrlen);
+
+     if (args->mr->client_sockfd[id] < 0) {
+       printf("Server: Cannot build connection for client %d.\n", id);
+       perror("Error message");
+       return NULL;
+     }
+   printf("Server: Client %d connected!\n", id);
+
+
   //char * buffer[50];
   int fn_result = -1,
       receive_bytes = -1,
