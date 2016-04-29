@@ -431,7 +431,7 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
     //Get Funtion Return Value
     receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
     printf("WHat is fuck will you be! recive_bytes = %d", receive_bytes);
-    if(receive_bytes != 4) {
+    while(receive_bytes != 4) {
       receive_bytes = recv(mr->client_sockfd[id], &fn_result, 4, 0);
     }
     else if(htonl(fn_result) == 0) return 0;
