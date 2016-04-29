@@ -326,7 +326,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
 int
 mr_finish(struct map_reduce *mr) {
   if(mr->client){
-    printf("Client: I'm going to suiside now!\n");
+    printf("Client: I'm going to suicide now!\n");
     // Wait all map function finish
     for(int i=0; i<(mr->nmaps); i++) {
       if(pthread_join(mr->map_threads[i], NULL)) {
@@ -416,7 +416,7 @@ mr_produce(struct map_reduce *mr, int id, const struct kvpair *kv) {
   }
   //Success
   //close(mr->client_sockfd[id]);
-  return 0;
+  return 1;
 }
 
 /* Called by the Reduce function to consume a key-value pair */
@@ -433,13 +433,14 @@ mr_consume(struct map_reduce *mr, int id, struct kvpair *kv) {
   //receive_bytes = recv(mr->client_sockfd[id], &fn_result, sizeof(fn_result), 0);
   receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(uint32_t), 0);
   kv->keysz = ntohl(value);
-
+  if(receive_bytes == 0) return 0;
   //kv->key = malloc(sizeof(kv->keysz));
 
   receive_bytes = recv(mr->client_sockfd[id], &value, sizeof(uint32_t), 0);
+  if(receive_bytes == 0) return 0;
   kv->valuesz = ntohl(value);
-
+  
   //kv->value = malloc(sizeof(kv->valuesz));
 
-  return 0;
+  return 1;
 }
