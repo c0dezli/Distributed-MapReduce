@@ -128,7 +128,7 @@ mr_create(map_fn map, reduce_fn reduce, int nmaps) {
    // Save the Parameters
    mr->map             = map;
    mr->reduce          = reduce;
-   mr->nmaps       = nmaps;
+   mr->nmaps           = nmaps;
 
    // File Descriptors
    mr->outfd           = -1;
@@ -261,7 +261,7 @@ mr_start(struct map_reduce *mr, const char *path, const char *ip, uint16_t port)
   	for(int i=0; i<(mr->nmaps); i++) {
 
     	//Assign different socketfd to every map thread
-      mr->infd[i] = open(path, O_WRONLY | O_CREAT | O_TRUNC, 644);
+      mr->infd[i] = open(inpath, O_RDONLY, 644)
     	if (mr->infd[i] < 0) {
     	  close(mr->infd[i]);
     	  perror("Client: Cannot open input file");
